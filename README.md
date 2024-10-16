@@ -1,8 +1,13 @@
-# golang-template
+# switchboard
 
-[![Documentation](https://pkg.go.dev/badge/github.com/go-zen-chu/golang-template)](http://pkg.go.dev/github.com/go-zen-chu/golang-template)
-[![Actions Status](https://github.com/go-zen-chu/golang-template/workflows/main/badge.svg)](https://github.com/go-zen-chu/golang-template/actions)
-[![Actions Status](https://github.com/go-zen-chu/golang-template/workflows/check-pr/badge.svg)](https://github.com/go-zen-chu/golang-template/actions)
-[![GitHub issues](https://img.shields.io/github/issues/go-zen-chu/golang-template.svg)](https://github.com/go-zen-chu/golang-template/issues)
+[![Documentation](https://pkg.go.dev/badge/github.com/go-zen-chu/switchboard)](http://pkg.go.dev/github.com/go-zen-chu/switchboard)
+[![Actions Status](https://github.com/go-zen-chu/switchboard/workflows/main/badge.svg)](https://github.com/go-zen-chu/switchboard/actions)
+[![Actions Status](https://github.com/go-zen-chu/switchboard/workflows/check-pr/badge.svg)](https://github.com/go-zen-chu/switchboard/actions)
+[![GitHub issues](https://img.shields.io/github/issues/go-zen-chu/switchboard.svg)](https://github.com/go-zen-chu/switchboard/issues)
 
-Github template repository for golang.
+switchboard operator between sns.
+
+## Usecase
+
+1. Sync bluesky post to x
+2. Reply to bluesky post via openai
