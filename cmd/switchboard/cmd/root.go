@@ -1,16 +1,22 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
+	"context"
 	"log/slog"
 	"os"
 
+	"github.com/go-zen-chu/switchboard"
 	"github.com/spf13/cobra"
 )
 
-func NewRootCmd(cmdReq CommandRequirements) *cobra.Command {
+// SwichboardRequirements is the all requirements for switchboard. Used for dependency injection.
+type SwitchboardRequirements struct {
+	Ctx           context.Context
+	BlueskyClient switchboard.BlueskyClient
+	XClient       switchboard.XClient
+}
+
+func NewRootCmd(switchboardReq *SwitchboardRequirements) *cobra.Command {
 	const defaultVerbose = false
 	var verbose bool
 
@@ -41,6 +47,6 @@ func NewRootCmd(cmdReq CommandRequirements) *cobra.Command {
 		defaultVerbose,
 		"verbose output (log level debug)",
 	)
-	rootCmd.AddCommand(NewQueryCmd(cmdReq))
+	rootCmd.AddCommand(NewBluesky2XCmd(switchboardReq.Ctx, switchboardReq.BlueskyClient, switchboardReq.XClient))
 	return rootCmd
 }

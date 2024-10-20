@@ -10,4 +10,13 @@ switchboard operator between sns.
 ## Usecase
 
 1. Sync bluesky post to x
+
+    ```console
+    switchboard bluesky2x
+    ```
+
 2. Reply to bluesky post via openai
+
+    ```console
+    switchboard ai-reply -sns=bluesky
+    ```
