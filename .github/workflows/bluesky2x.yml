@@ -14,6 +14,7 @@ jobs:
         with:
           name: sync_info.json
           path: $GITHUB_WORKSPACE/output
+        continue-on-error: true # for the first run
       - id: run-switchboard-bluesky2x
         uses: ./ # specify dir where action.yml exists
         with:
