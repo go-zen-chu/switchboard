@@ -4,6 +4,9 @@ go 1.23
 
 require (
 	github.com/bluesky-social/indigo v0.0.0-20241008040750-06bacb465af7
+	github.com/dghubble/go-twitter v0.0.0-20221104224141-912508c3888b
+	github.com/dghubble/oauth1 v0.7.3
+	github.com/g8rswimmer/go-twitter/v2 v2.1.5
 	github.com/go-zen-chu/go-build-tools v0.0.0-20240929035559-91e20c6456d7
 	github.com/michimani/gotwi v0.16.1
 	github.com/spf13/cobra v1.8.1
@@ -12,11 +15,8 @@ require (
 require (
 	github.com/carlmjohnson/versioninfo v0.22.5 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
-	github.com/dghubble/go-twitter v0.0.0-20221104224141-912508c3888b // indirect
-	github.com/dghubble/oauth1 v0.7.3 // indirect
 	github.com/dghubble/sling v1.4.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/g8rswimmer/go-twitter/v2 v2.1.5 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -52,7 +52,6 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/polydawn/refmt v0.89.1-0.20221221234430-40501e09de1f // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
-	github.com/sivchari/gotwtr v1.2.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/whyrusleeping/cbor-gen v0.1.3-0.20240904181319-8dc02b38228c // indirect
