@@ -16,6 +16,10 @@ jobs:
           name: output
           path: $GITHUB_WORKSPACE/output
         continue-on-error: true # for the first run
+      - run: |
+          echo $GITHUB_WORKSPACE
+          ls -l $GITHUB_WORKSPACE
+      # TODO: somehow we need to pass artifact to this action
       - id: run-switchboard-bluesky2x
         uses: ./ # specify dir where action.yml exists
         with:
@@ -27,6 +31,9 @@ jobs:
           X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
+      - run: |
+          echo $GITHUB_WORKSPACE
+          ls -l $GITHUB_WORKSPACE
       - uses: actions/upload-artifact@v4
         with:
           # details: https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
