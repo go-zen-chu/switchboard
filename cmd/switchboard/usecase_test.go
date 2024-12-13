@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"testing"
 	"time"
@@ -51,12 +50,10 @@ func TestMain(t *testing.T) {
 					Return(&switchboard.XPost{
 						ID: "1111111111111111111",
 					}, nil)
-				slog.Warn("test")
 				mockXCli.EXPECT().Post(gomock.Any(), gomock.Regex("test2.*")).
 					Return(&switchboard.XPost{
 						ID: "2222222222222222222",
 					}, nil)
-				slog.Warn("test2")
 			},
 			wantErr: false,
 		},
