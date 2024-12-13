@@ -11,14 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # docker command is pre-installed in the ubutnu-latest image
+      # docker command is pre-installed in the ubuntu-latest image
       - name: Docker login with mage
         uses: magefile/mage-action@v3
         with:
           version: latest
           args: DockerLogin
         env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_USERNAME: amasuda
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: Publish image with timestamp
         uses: magefile/mage-action@v3
