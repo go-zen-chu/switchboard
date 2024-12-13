@@ -11,6 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          repository: go-zen-chu/switchboard
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
       - uses: actions/download-artifact@v4
         with:
           name: output
@@ -19,11 +24,8 @@ jobs:
       - run: |
           echo $GITHUB_WORKSPACE
           ls -l $GITHUB_WORKSPACE
-      # TODO: somehow we need to pass artifact to this action
       - id: run-switchboard-bluesky2x
-        uses: ./ # specify dir where action.yml exists
-        with:
-          verbose: true
+        run: go run cmd/switchboard/main.go bluesky2x -v
         env:
           BLUESKY_IDENTIFIER: ${{ secrets.BLUESKY_IDENTIFIER }}
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
