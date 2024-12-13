@@ -37,12 +37,10 @@ func TestMain(t *testing.T) {
 			)
 			xcli, _ := switchboard.NewXClient(
 				ctx,
-				os.Getenv("X_ID"),
 				os.Getenv("X_ACCESS_TOKEN"),
 				os.Getenv("X_ACCESS_SECRET"),
 				os.Getenv("X_API_KEY"),
 				os.Getenv("X_API_SECRET"),
-				os.Getenv("X_BEARER_TOKEN"),
 			)
 			app, goterr := NewApp(&cmd.SwitchboardRequirements{
 				Ctx:           ctx,
@@ -58,7 +56,6 @@ func TestMain(t *testing.T) {
 				t.Errorf("app.Run() error = %v, wantErr %v", goterr, tt.wantErr)
 				return
 			}
-
 		})
 	}
 }

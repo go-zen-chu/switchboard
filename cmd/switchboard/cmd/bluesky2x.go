@@ -14,7 +14,7 @@ const (
 	// numSyncPosts is the number of posts to sync from Bluesky to X.
 	// Make sure not to exceed the rate limit.
 	// https://developer.x.com/en/docs/x-api/lists/list-tweets/introduction
-	numSyncPosts = 3 //50
+	numSyncPosts = 2 //50
 )
 
 func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli switchboard.XClient) *cobra.Command {
@@ -24,7 +24,6 @@ func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli s
 		Short: "Send bluesky post to x",
 		Long:  `Send bluesky post to x`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// get posts from bluesky
 			bposts, err := bcli.GetMyLatestPostsCreatedAsc(ctx, numSyncPosts)
 			if err != nil {
 				return fmt.Errorf("getting latest posts from Bluesky: %w\n", err)
@@ -48,18 +47,17 @@ func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli s
 			}
 
 			if len(newPosts) == 0 {
-				slog.Info("No new posts")
+				slog.Info("No new posts. Finished.")
 				return nil
 			}
 
 			for _, bpost := range newPosts {
 				cnt := fmt.Sprintf("%s\n🤖from🦋: %s", bpost.Content, bpost.URL)
-
 				xpost, err := xcli.Post(ctx, cnt)
 				if err != nil {
 					return fmt.Errorf("post tweet: %w\n", err)
 				}
-				slog.Debug("Posted tweet", "cid", bpost.Cid, "xpost", xpost)
+				slog.Debug("Posted tweet", "cid", bpost.Cid, "tweet id", xpost.ID, "content", cnt)
 
 				// Store sync info for when got an error while processing (& retry)
 				stor.SyncInfo.Posts = append(stor.SyncInfo.Posts, switchboard.PostInfo{
@@ -71,8 +69,8 @@ func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli s
 				if err := stor.StoreSyncInfo(); err != nil {
 					return fmt.Errorf("storing sync info: %w\n", err)
 				}
+				slog.Debug("updated sync info")
 			}
-
 			return nil
 		},
 	}

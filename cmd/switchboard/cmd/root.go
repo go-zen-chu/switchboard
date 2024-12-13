@@ -23,8 +23,8 @@ func NewRootCmd(switchboardReq *SwitchboardRequirements) *cobra.Command {
 	// rootCmd represents the base command when called without any subcommands
 	rootCmd := &cobra.Command{
 		Use:   "switchboard",
-		Short: "A tool that connect between sns",
-		Long:  `A tool that connect between sns`,
+		Short: "A tool that connect between sns like a switchboard operator",
+		Long:  `A tool that connect between sns like a switchboard operator`,
 		// Uncomment the following line if your bare application
 		// has an action associated with it:
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {

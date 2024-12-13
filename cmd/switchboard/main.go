@@ -40,12 +40,10 @@ func newSwitchboardRequirements() (*cmd.SwitchboardRequirements, error) {
 	}
 	xcli, err := switchboard.NewXClient(
 		ctx,
-		os.Getenv("X_ID"),
 		os.Getenv("X_ACCESS_TOKEN"),
 		os.Getenv("X_ACCESS_SECRET"),
 		os.Getenv("X_API_KEY"),
 		os.Getenv("X_API_SECRET"),
-		os.Getenv("X_BEARER_TOKEN"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("init x client: %w", err)
