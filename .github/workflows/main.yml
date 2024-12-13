@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - ".gitignore"
+      - "LICENSE"
+      - "**.md"
+      - "**.yml"
+      - "mage**.go"
+      - ".github/**"
+      - ".vscode/**"
 
 jobs:
   build-publish-image:
