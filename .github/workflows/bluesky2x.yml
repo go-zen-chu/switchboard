@@ -1,8 +1,9 @@
 name: switchboard/bluesky2x
 
 on:
-  schedule:
-    - cron: "*/10 * * * *"
+  workflow_dispatch
+  # schedule:
+  #   - cron: "*/10 * * * *"
 
 jobs:
   bluesky2x:
