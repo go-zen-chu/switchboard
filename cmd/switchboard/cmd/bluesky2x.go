@@ -77,6 +77,7 @@ func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli s
 				}
 				slog.Debug("updated sync info")
 			}
+			slog.Info("Finished syncing from bluesky to X")
 			return nil
 		},
 	}
