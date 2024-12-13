@@ -3,28 +3,45 @@ package switchboard
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/michimani/gotwi"
-	"github.com/michimani/gotwi/tweet/timeline"
-	"github.com/michimani/gotwi/tweet/timeline/types"
+	"github.com/michimani/gotwi/tweet/managetweet"
+	"github.com/michimani/gotwi/tweet/managetweet/types"
 )
 
 type XClient interface {
-	GetMyLatestPostsCreatedAsc(ctx context.Context, numPosts int64) ([]XPost, error)
+	Post(ctx context.Context, content string) (*XPost, error)
 }
 
 type XPost struct {
-	ID      string
-	Content string
+	ID string
 }
 
 type xclient struct {
-	xID string
-	cli *gotwi.Client
+	gotwiCli *gotwi.Client
 }
 
-func NewXClient(ctx context.Context, xID, oauthToken, oauthTokenSecret, apiKey, apiKeySecret string) (XClient, error) {
-	xcli, err := gotwi.NewClient(&gotwi.NewClientInput{
+type BearerAuthorizer struct {
+	Token string
+}
+
+func (a BearerAuthorizer) Add(req *http.Request) {
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", a.Token))
+}
+
+func NewXClient(ctx context.Context, oauthToken, oauthTokenSecret, apiKey, apiKeySecret string) (XClient, error) {
+	for k, v := range map[string]string{
+		"oauthToken":       oauthToken,
+		"oauthTokenSecret": oauthTokenSecret,
+		"apiKey":           apiKey,
+		"apiKeySecret":     apiKeySecret,
+	} {
+		if v == "" {
+			return nil, fmt.Errorf("%s is empty", k)
+		}
+	}
+	gotwiCli, err := gotwi.NewClient(&gotwi.NewClientInput{
 		AuthenticationMethod: gotwi.AuthenMethodOAuth1UserContext,
 		OAuthToken:           oauthToken,
 		OAuthTokenSecret:     oauthTokenSecret,
@@ -32,28 +49,26 @@ func NewXClient(ctx context.Context, xID, oauthToken, oauthTokenSecret, apiKey, 
 		APIKeySecret:         apiKeySecret,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("creating X client: %w", err)
+		return nil, fmt.Errorf("init gotwi client: %w", err)
 	}
+
 	return &xclient{
-		xID: xID,
-		cli: xcli,
+		gotwiCli: gotwiCli,
 	}, nil
 }
 
-func (c *xclient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPosts int64) ([]XPost, error) {
-	tweets, err := timeline.ListTweets(ctx, c.cli, &types.ListTweetsInput{
-		ID:         c.xID,
-		MaxResults: types.ListMaxResults(numPosts),
-	})
+func (c *xclient) Post(ctx context.Context, content string) (*XPost, error) {
+	// TODO: content length must be < 280 letters
+	ci := &types.CreateInput{
+		Text: gotwi.String(content),
+	}
+	// TODO: support reply
+	res, err := managetweet.Create(ctx, c.gotwiCli, ci)
 	if err != nil {
-		return nil, fmt.Errorf("getting latest posts from X: %w", err)
+		return nil, fmt.Errorf("managetweet create tweet: %w", err)
 	}
-	posts := make([]XPost, 0, len(tweets.Data))
-	for _, tweet := range tweets.Data {
-		posts = append(posts, XPost{
-			ID:      *tweet.ID,
-			Content: *tweet.Text,
-		})
+	p := &XPost{
+		ID: *res.Data.ID,
 	}
-	return posts, nil
+	return p, nil
 }

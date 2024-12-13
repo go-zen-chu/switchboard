@@ -1,0 +1,26 @@
+name: switchboard/bluesky2x
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+
+jobs:
+  bluesky2x:
+    name: Sync Bluesky post to X
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sync_info.json
+          path: $GITHUB_WORKSPACE/output
+      - id: run-switchboard-bluesky2x
+        uses: ./ # specify dir where action.yml exists
+        with:
+          verbose: true
+      - uses: actions/upload-artifact@v4
+        with:
+          # details: https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
+          name: sync_info.json
+          path: $GITHUB_WORKSPACE/output
+          overwrite: true
+          retention-days: 90

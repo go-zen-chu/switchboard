@@ -4,7 +4,6 @@ go 1.23
 
 require (
 	github.com/bluesky-social/indigo v0.0.0-20241008040750-06bacb465af7
-	github.com/go-zen-chu/go-build-tools v0.0.0-20240929035559-91e20c6456d7
 	github.com/michimani/gotwi v0.16.1
 	github.com/spf13/cobra v1.8.1
 )
@@ -14,6 +13,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-zen-chu/go-build-tools v0.0.0-20240929035559-91e20c6456d7 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
@@ -35,6 +35,7 @@ require (
 	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
+	github.com/magefile/mage v1.15.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect

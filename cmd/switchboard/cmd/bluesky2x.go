@@ -1,6 +1,4 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
+//go:generate mockgen -source=$GOFILE -destination=mock_$GOFILE -package=$GOPACKAGE
 package cmd
 
 import (
@@ -13,9 +11,10 @@ import (
 )
 
 const (
-	// numSyncPosts is the number of posts to sync from Bluesky to X. Be careful not to exceed the rate limit.
+	// numSyncPosts is the number of posts to sync from Bluesky to X.
+	// Make sure not to exceed the rate limit.
 	// https://developer.x.com/en/docs/x-api/lists/list-tweets/introduction
-	numSyncPosts = 10
+	numSyncPosts = 2 //50
 )
 
 func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli switchboard.XClient) *cobra.Command {
@@ -25,61 +24,53 @@ func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli s
 		Short: "Send bluesky post to x",
 		Long:  `Send bluesky post to x`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// get posts from bluesky
 			bposts, err := bcli.GetMyLatestPostsCreatedAsc(ctx, numSyncPosts)
 			if err != nil {
 				return fmt.Errorf("getting latest posts from Bluesky: %w\n", err)
 			}
-			// get posts from x
-			xposts, err := xcli.GetMyLatestPostsCreatedAsc(ctx, numSyncPosts)
+			slog.Debug("Got posts", "bluesky", bposts)
+
+			stor := switchboard.NewStorer()
+			syncInfo, err := stor.LoadSyncInfo()
 			if err != nil {
-				return fmt.Errorf("getting latest posts from X: %w\n", err)
+				return fmt.Errorf("loading sync info: %w\n", err)
 			}
-			slog.Info("Got posts", "bluesky", bposts, "x", xposts)
 
-			// post to x that are not in json
+			newPosts := make([]switchboard.BlueskyPost, 0, len(bposts))
+			pm := syncInfo.GetPostMap()
+			for _, bpost := range bposts {
+				if _, ok := pm[bpost.Cid]; ok {
+					slog.Debug("Post already sent", "content", bpost.Content, "cid", bpost.Cid)
+					continue
+				}
+				newPosts = append(newPosts, bpost)
+			}
 
-			// // save sent posts to json and git push
-			// for _, bpost := range bposts {
-			// 	posted[bpost.Cid] = bpost
-			// }
-			// jsonBytes, err := json.MarshalIndent(posted, "", "  ")
-			// if err != nil {
-			// 	return fmt.Errorf("marshaling posts to json: %w\n", err)
-			// }
-			// err = os.WriteFile(postStorePath, jsonBytes, 0644)
-			// if err != nil {
-			// 	return fmt.Errorf("writing posts to json: %w\n", err)
-			// }
-			// repo, err := git.PlainOpen(".")
-			// if err != nil {
-			// 	return fmt.Errorf("opening git repo: %w\n", err)
-			// }
-			// wt, err := repo.Worktree()
-			// if err != nil {
-			// 	return fmt.Errorf("getting worktree: %w\n", err)
-			// }
-			// _, err = wt.Add(postStorePath)
-			// if err != nil {
-			// 	return fmt.Errorf("adding post json to git: %w\n", err)
-			// }
-			// commit, err := wt.Commit("[skip ci] Add sent bluesky posts", &git.CommitOptions{
-			// 	Author: &object.Signature{
-			// 		Name:  "bluesky2x",
-			// 		Email: "bluesky2x@github.com",
-			// 		When:  time.Now(),
-			// 	},
-			// })
-			// if err != nil {
-			// 	return fmt.Errorf("committing post json to git: %w\n", err)
-			// }
-			// err = repo.Push(&git.PushOptions{
-			// 	RemoteName: "origin",
-			// })
-			// if err != nil {
-			// 	return fmt.Errorf("pushing post json to git: %w\n", err)
-			// }
-			// slog.Info("Pushed post json to git", "commit", commit)
+			if len(newPosts) == 0 {
+				slog.Info("No new posts. Finished.")
+				return nil
+			}
+
+			for _, bpost := range newPosts {
+				cnt := fmt.Sprintf("%s\n🤖from🦋: %s", bpost.Content, bpost.URL)
+				xpost, err := xcli.Post(ctx, cnt)
+				if err != nil {
+					return fmt.Errorf("post tweet: %w\n", err)
+				}
+				slog.Debug("Posted tweet", "cid", bpost.Cid, "tweet id", xpost.ID, "content", cnt)
+
+				// Store sync info for when got an error while processing (& retry)
+				stor.SyncInfo.Posts = append(stor.SyncInfo.Posts, switchboard.PostInfo{
+					BlueskyCid:           bpost.Cid,
+					TweetID:              xpost.ID,
+					Content:              bpost.Content,
+					BlueskyPostCreatedAt: bpost.CreatedAt,
+				})
+				if err := stor.StoreSyncInfo(); err != nil {
+					return fmt.Errorf("storing sync info: %w\n", err)
+				}
+				slog.Debug("updated sync info")
+			}
 			return nil
 		},
 	}

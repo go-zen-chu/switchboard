@@ -17,6 +17,7 @@ switchboard operator between sns.
 ```console
 switchboard bluesky2x
 # with --ai option, genai will response to your post via aictl
+switchboard bluesky2x --ai 
 ```
 
 ### Usage
@@ -25,4 +26,3 @@ switchboard bluesky2x
 2. Post to bluesky with /ai in head of post, ai will respond to your post (via aictl)
 3. When someone send reply to your bluesky post, it will do nothing for privacy
 4. When you delete your bluesky post, it will deleted from X too
-
