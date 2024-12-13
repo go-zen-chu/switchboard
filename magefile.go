@@ -54,6 +54,10 @@ func DockerPublishLatest() error {
 	return gbt.DockerPublishLatest(imageRegistry, repository)
 }
 
+func DockerBuildPublishLatest() error {
+	return gbt.DockerBuildPublishLatest(imageRegistry, repository, dockerFileLocation)
+}
+
 func DockerBuildPublishWithGenTag() error {
 	return gbt.DockerBuildPublishGeneratedImageTag(imageRegistry, repository, dockerFileLocation)
 }

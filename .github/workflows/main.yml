@@ -18,7 +18,7 @@ jobs:
           version: latest
           args: DockerLogin
         env:
-          DOCKER_USERNAME: amasuda
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: Publish image with timestamp
         uses: magefile/mage-action@v3
@@ -29,4 +29,4 @@ jobs:
         uses: magefile/mage-action@v3
         with:
           version: latest
-          args: DockerPublishLatest
+          args: DockerBuildPublishLatest
