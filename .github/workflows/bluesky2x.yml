@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: sync_info.json
+          name: output
           path: $GITHUB_WORKSPACE/output
         continue-on-error: true # for the first run
       - id: run-switchboard-bluesky2x
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           # details: https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
-          name: sync_info.json
+          name: output
           path: $GITHUB_WORKSPACE/output
           overwrite: true
           retention-days: 90

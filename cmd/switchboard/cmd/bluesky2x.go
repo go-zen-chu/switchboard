@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -55,6 +56,11 @@ func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli s
 				cnt := fmt.Sprintf("%s\n🤖from🦋: %s", bpost.Content, bpost.URL)
 				xpost, err := xcli.Post(ctx, cnt)
 				if err != nil {
+					var errXDup *switchboard.ErrXDuplicatePost
+					if errors.As(err, &errXDup) {
+						slog.Warn("Found duplicate tweet in X", "content", cnt)
+						continue
+					}
 					return fmt.Errorf("post tweet: %w\n", err)
 				}
 				slog.Debug("Posted tweet", "cid", bpost.Cid, "tweet id", xpost.ID, "content", cnt)
@@ -71,6 +77,7 @@ func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli s
 				}
 				slog.Debug("updated sync info")
 			}
+			slog.Info("Finished syncing from bluesky to X")
 			return nil
 		},
 	}
