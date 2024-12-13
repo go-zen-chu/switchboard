@@ -20,6 +20,13 @@ jobs:
         uses: ./ # specify dir where action.yml exists
         with:
           verbose: true
+        env:
+          BLUESKY_IDENTIFIER: ${{ secrets.BLUESKY_IDENTIFIER }}
+          BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
       - uses: actions/upload-artifact@v4
         with:
           # details: https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
