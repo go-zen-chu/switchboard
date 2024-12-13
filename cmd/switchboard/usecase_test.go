@@ -18,7 +18,6 @@ func TestMain(t *testing.T) {
 		args          []string
 		customizeMock func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient)
 		wantErr       bool
-		errMsg        string
 	}{
 		{
 			name:    "If help flag given, show help",
@@ -61,7 +60,6 @@ func TestMain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
 			c := gomock.NewController(t)
 			mockBCli := switchboard.NewMockBlueskyClient(c)
 			mockXCli := switchboard.NewMockXClient(c)
@@ -70,7 +68,7 @@ func TestMain(t *testing.T) {
 				tt.customizeMock(mockBCli, mockXCli)
 			}
 			app, goterr := NewApp(&cmd.SwitchboardRequirements{
-				Ctx:           ctx,
+				Ctx:           context.Background(),
 				BlueskyClient: mockBCli,
 				XClient:       mockXCli,
 			})
