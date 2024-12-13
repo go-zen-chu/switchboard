@@ -31,6 +31,16 @@ func (a BearerAuthorizer) Add(req *http.Request) {
 }
 
 func NewXClient(ctx context.Context, oauthToken, oauthTokenSecret, apiKey, apiKeySecret string) (XClient, error) {
+	for k, v := range map[string]string{
+		"oauthToken":       oauthToken,
+		"oauthTokenSecret": oauthTokenSecret,
+		"apiKey":           apiKey,
+		"apiKeySecret":     apiKeySecret,
+	} {
+		if v == "" {
+			return nil, fmt.Errorf("%s is empty", k)
+		}
+	}
 	gotwiCli, err := gotwi.NewClient(&gotwi.NewClientInput{
 		AuthenticationMethod: gotwi.AuthenMethodOAuth1UserContext,
 		OAuthToken:           oauthToken,

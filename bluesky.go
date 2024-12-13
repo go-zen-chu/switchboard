@@ -36,14 +36,16 @@ type BlueskyReply struct {
 }
 
 func NewBlueskyClient(ctx context.Context, identifier, password string) (BlueskyClient, error) {
+	for k, v := range map[string]string{
+		"identifier": identifier,
+		"password":   password,
+	} {
+		if v == "" {
+			return nil, fmt.Errorf("%s is empty", k)
+		}
+	}
 	bcli := &xrpc.Client{
 		Host: BlueskyHost,
-	}
-	if identifier == "" {
-		return nil, fmt.Errorf("identifier is empty")
-	}
-	if password == "" {
-		return nil, fmt.Errorf("password is empty")
 	}
 	sout, err := atproto.ServerCreateSession(ctx, bcli, &atproto.ServerCreateSession_Input{
 		Identifier: identifier,
