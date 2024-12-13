@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/atproto"
@@ -22,10 +23,16 @@ type blueskyClient struct {
 }
 
 type BlueskyPost struct {
-	Cid       string    `json:"cid"`
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"created_at"`
-	Uri       string    `json:"uri"`
+	Cid       string        `json:"cid"`
+	Content   string        `json:"content"`
+	CreatedAt time.Time     `json:"created_at"`
+	URL       string        `json:"url"`
+	Reply     *BlueskyReply `json:"reply,omitempty"`
+}
+
+type BlueskyReply struct {
+	RootCid   string `json:"root_cid"`
+	ParentCid string `json:"parent_cid"`
 }
 
 func NewBlueskyClient(ctx context.Context, identifier, password string) (BlueskyClient, error) {
@@ -75,11 +82,21 @@ func (bc *blueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPost
 		if err != nil {
 			return nil, fmt.Errorf("parse bluesky post CreatedAt(%s): %w", fp.CreatedAt, err)
 		}
+		var rep *BlueskyReply
+		if fp.Reply != nil {
+			rep = &BlueskyReply{
+				RootCid:   fp.Reply.Root.Cid,
+				ParentCid: fp.Reply.Parent.Cid,
+			}
+		}
+		uriParts := strings.Split(string(f.Post.Uri), "/")
+		url := fmt.Sprintf("https://bsky.app/profile/%s/post/%s", uriParts[2], uriParts[4])
 		posts = append(posts, BlueskyPost{
 			Cid:       f.Post.Cid,
 			Content:   fp.Text,
 			CreatedAt: ca,
-			Uri:       f.Post.Uri,
+			URL:       url,
+			Reply:     rep,
 		})
 	}
 	sort.Slice(posts, func(i, j int) bool {

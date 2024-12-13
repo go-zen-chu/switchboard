@@ -14,10 +14,14 @@ import (
 func main() {
 	swq, err := newSwitchboardRequirements()
 	if err != nil {
-		slog.Error("fail init requirements: %w", err)
+		slog.Error("fail init requirements", "error", err)
 		os.Exit(1)
 	}
 	app, err := NewApp(swq)
+	if err != nil {
+		slog.Error("fail init app", "error", err)
+		os.Exit(1)
+	}
 	if err := app.Run(os.Args); err != nil {
 		slog.Error("while running app", "error", err)
 		os.Exit(1)
@@ -41,6 +45,7 @@ func newSwitchboardRequirements() (*cmd.SwitchboardRequirements, error) {
 		os.Getenv("X_ACCESS_SECRET"),
 		os.Getenv("X_API_KEY"),
 		os.Getenv("X_API_SECRET"),
+		os.Getenv("X_BEARER_TOKEN"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("init x client: %w", err)

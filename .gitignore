@@ -1,3 +1,7 @@
+output/
+env/
+
+.env
 .envrc
 # Binaries for programs and plugins
 *.exe
