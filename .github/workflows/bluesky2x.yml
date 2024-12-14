@@ -2,10 +2,10 @@ name: switchboard/bluesky2x
 
 on:
   # for manual testing
-  #workflow_dispatch
+  workflow_dispatch
   # NOTE: per 30m may cause `429 Too Many Request`
-  schedule:
-    - cron: "* */1 * * *"
+  # schedule:
+  #   - cron: "* */1 * * *"
 
 jobs:
   bluesky2x:
@@ -22,6 +22,7 @@ jobs:
         with:
           name: output
           path: output
+          github-token: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true # for the first run
       - id: run-switchboard-bluesky2x
         run: go run cmd/switchboard/main.go bluesky2x -v
@@ -32,7 +33,8 @@ jobs:
           X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
-      - uses: actions/upload-artifact@v4
+      - id: bluesky2x-upload-output
+        uses: actions/upload-artifact@v4
         with:
           # details: https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
           name: output
