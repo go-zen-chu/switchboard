@@ -3,8 +3,9 @@ name: switchboard/bluesky2x
 on:
   # for manual testing
   #workflow_dispatch
+  # NOTE: per 30m may cause `429 Too Many Request`
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "* */1 * * *"
 
 jobs:
   bluesky2x:
