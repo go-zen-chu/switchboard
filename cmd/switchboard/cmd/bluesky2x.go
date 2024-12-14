@@ -25,6 +25,7 @@ func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli s
 		Short: "Send bluesky post to x",
 		Long:  `Send bluesky post to x`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			slog.Info("Start syncing latest posts from bluesky to X")
 			bposts, err := bcli.GetMyLatestPostsCreatedAsc(ctx, numSyncLatestPosts)
 			if err != nil {
 				return fmt.Errorf("getting latest posts from Bluesky: %w\n", err)
@@ -75,7 +76,7 @@ func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli s
 				if err := stor.StoreSyncInfo(); err != nil {
 					return fmt.Errorf("storing sync info: %w\n", err)
 				}
-				slog.Debug("updated sync info")
+				slog.Debug("Updated sync info")
 			}
 			slog.Info("Finished syncing from bluesky to X")
 			return nil
