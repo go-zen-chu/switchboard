@@ -15,7 +15,7 @@ const (
 	// numSyncLatestPosts is the number of posts to sync from Bluesky to X.
 	// Make sure not to exceed the rate limit.
 	// https://developer.x.com/en/docs/x-api/lists/list-tweets/introduction
-	numSyncLatestPosts = 10
+	numSyncLatestPosts = 1
 )
 
 func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli switchboard.XClient) *cobra.Command {
