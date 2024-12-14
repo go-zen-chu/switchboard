@@ -19,7 +19,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: output
-          path: $GITHUB_WORKSPACE/output
+          path: output
         continue-on-error: true # for the first run
       - run: |
           echo $GITHUB_WORKSPACE
@@ -40,6 +40,7 @@ jobs:
         with:
           # details: https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs
           name: output
-          path: $GITHUB_WORKSPACE/output
+          path: output
           overwrite: true
+          if-no-files-found: error
           retention-days: 90
