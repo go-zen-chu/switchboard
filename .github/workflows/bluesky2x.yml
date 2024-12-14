@@ -1,9 +1,10 @@
 name: switchboard/bluesky2x
 
 on:
-  workflow_dispatch
-  # schedule:
-  #   - cron: "*/10 * * * *"
+  # for manual testing
+  #workflow_dispatch
+  schedule:
+    - cron: "*/10 * * * *"
 
 jobs:
   bluesky2x:
@@ -21,9 +22,6 @@ jobs:
           name: output
           path: output
         continue-on-error: true # for the first run
-      - run: |
-          echo $GITHUB_WORKSPACE
-          ls -l $GITHUB_WORKSPACE
       - id: run-switchboard-bluesky2x
         run: go run cmd/switchboard/main.go bluesky2x -v
         env:
@@ -33,9 +31,6 @@ jobs:
           X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
-      - run: |
-          echo $GITHUB_WORKSPACE
-          ls -l $GITHUB_WORKSPACE
       - uses: actions/upload-artifact@v4
         with:
           # details: https://github.com/actions/upload-artifact?tab=readme-ov-file#inputs

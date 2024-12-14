@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	// numSyncPosts is the number of posts to sync from Bluesky to X.
+	// numSyncLatestPosts is the number of posts to sync from Bluesky to X.
 	// Make sure not to exceed the rate limit.
 	// https://developer.x.com/en/docs/x-api/lists/list-tweets/introduction
-	numSyncPosts = 2 //50
+	numSyncLatestPosts = 10
 )
 
 func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli switchboard.XClient) *cobra.Command {
@@ -25,7 +25,7 @@ func NewBluesky2XCmd(ctx context.Context, bcli switchboard.BlueskyClient, xcli s
 		Short: "Send bluesky post to x",
 		Long:  `Send bluesky post to x`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bposts, err := bcli.GetMyLatestPostsCreatedAsc(ctx, numSyncPosts)
+			bposts, err := bcli.GetMyLatestPostsCreatedAsc(ctx, numSyncLatestPosts)
 			if err != nil {
 				return fmt.Errorf("getting latest posts from Bluesky: %w\n", err)
 			}
