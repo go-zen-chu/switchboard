@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"text/template"
 
 	_ "embed"
@@ -124,13 +125,18 @@ type WorkflowInfo struct {
 var wfTmplStr string
 
 func generateWorkflowFile() error {
+	workflowDir := ".github/workflows"
+	err := os.MkdirAll(workflowDir, 0755)
+	if err != nil {
+		return fmt.Errorf("mkdirall: %w", err)
+	}
 	tmpl, err := template.New("workflow").Parse(wfTmplStr)
 	if err != nil {
 		return fmt.Errorf("parsing template: %w", err)
 	}
 
 	wfCronName := "bluesky2x-cron"
-	wfCronFile, err := os.Create(".github/workflows/" + wfCronName + ".yml")
+	wfCronFile, err := os.Create(filepath.Join(workflowDir, wfCronName+".yml"))
 	if err != nil {
 		return fmt.Errorf("creating %s file: %w", wfCronName, err)
 	}
@@ -148,7 +154,7 @@ on:
 	}
 
 	wfManualName := "bluesky2x-manual"
-	wfManualFile, err := os.Create(".github/workflows/" + wfManualName + ".yml")
+	wfManualFile, err := os.Create(filepath.Join(workflowDir, wfManualName+".yml"))
 	if err != nil {
 		return fmt.Errorf("creating %s file: %w", wfManualName, err)
 	}
