@@ -16,7 +16,7 @@ import (
 const BlueskyHost = "https://bsky.social"
 
 type BlueskyClient interface {
-	GetMyLatestPostsCreatedAsc(ctx context.Context, numPosts int64) ([]BlueskyPost, error)
+	GetMyLatestPostsCreatedAsc(ctx context.Context, numPosts int) ([]BlueskyPost, error)
 }
 
 type blueskyClient struct {
@@ -66,12 +66,12 @@ func NewBlueskyClient(ctx context.Context, identifier, password string) (Bluesky
 	}, nil
 }
 
-func (bc *blueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPosts int64) ([]BlueskyPost, error) {
+func (bc *blueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPosts int) ([]BlueskyPost, error) {
 	profile, err := bsky.ActorGetProfile(ctx, bc.cli, bc.cli.Auth.Did)
 	if err != nil {
 		return nil, fmt.Errorf("Bluesky get profile: %w", err)
 	}
-	feeds, err := bsky.FeedGetAuthorFeed(ctx, bc.cli, profile.Did, "", "", false, numPosts)
+	feeds, err := bsky.FeedGetAuthorFeed(ctx, bc.cli, profile.Did, "", "", false, int64(numPosts))
 	if err != nil {
 		return nil, fmt.Errorf("Bluesky get author feed: %w", err)
 	}

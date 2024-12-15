@@ -7,10 +7,27 @@ import (
 	"time"
 
 	"github.com/go-zen-chu/switchboard"
-	"github.com/go-zen-chu/switchboard/cmd/switchboard/cmd"
 
 	"go.uber.org/mock/gomock"
 )
+
+type switchboardRequirementsForTest struct {
+	ctx  context.Context
+	bcli switchboard.BlueskyClient
+	xcli switchboard.XClient
+}
+
+func (s *switchboardRequirementsForTest) Context() context.Context {
+	return s.ctx
+}
+
+func (s *switchboardRequirementsForTest) BlueskyClient() switchboard.BlueskyClient {
+	return s.bcli
+}
+
+func (s *switchboardRequirementsForTest) XClient() switchboard.XClient {
+	return s.xcli
+}
 
 func TestMain(t *testing.T) {
 	tests := []struct {
@@ -18,6 +35,7 @@ func TestMain(t *testing.T) {
 		args          []string
 		customizeMock func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient)
 		wantErr       bool
+		cleanup       func(t *testing.T)
 	}{
 		{
 			name:    "If help flag given, show help",
@@ -56,6 +74,39 @@ func TestMain(t *testing.T) {
 					}, nil)
 			},
 			wantErr: false,
+			cleanup: func(t *testing.T) {
+				if _, err := os.Stat("output"); err == nil {
+					err = os.RemoveAll("output")
+					if err != nil {
+						t.Errorf("cleanup remove ./output error = %v", err)
+						return
+					}
+				} else {
+					if !os.IsNotExist(err) {
+						t.Errorf("stat directory error = %v", err)
+						return
+					}
+				}
+			},
+		},
+		{
+			name:    "If bluesky2x --gen-workflow-file subcommand used, generate workflow files",
+			args:    []string{"switchboard", "bluesky2x", "--gen-workflow-file"},
+			wantErr: false,
+			cleanup: func(t *testing.T) {
+				if _, err := os.Stat(".github"); err == nil {
+					err = os.RemoveAll(".github")
+					if err != nil {
+						t.Errorf("cleanup remove ./.github error = %v", err)
+						return
+					}
+				} else {
+					if !os.IsNotExist(err) {
+						t.Errorf("stat directory error = %v", err)
+						return
+					}
+				}
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -67,10 +118,11 @@ func TestMain(t *testing.T) {
 			if tt.customizeMock != nil {
 				tt.customizeMock(mockBCli, mockXCli)
 			}
-			app, goterr := NewApp(&cmd.SwitchboardRequirements{
-				Ctx:           context.Background(),
-				BlueskyClient: mockBCli,
-				XClient:       mockXCli,
+
+			app, goterr := NewApp(&switchboardRequirementsForTest{
+				ctx:  context.Background(),
+				bcli: mockBCli,
+				xcli: mockXCli,
 			})
 			if (goterr != nil) != tt.wantErr {
 				t.Errorf("NewApp error = %v, wantErr %v", goterr, tt.wantErr)
@@ -81,18 +133,9 @@ func TestMain(t *testing.T) {
 				t.Errorf("app.Run() error = %v, wantErr %v", goterr, tt.wantErr)
 				return
 			}
-			// cleanup
-			if _, err := os.Stat("output"); err == nil {
-				err = os.RemoveAll("output")
-				if err != nil {
-					t.Errorf("cleanup remove all error = %v", err)
-					return
-				}
-			} else {
-				if !os.IsNotExist(err) {
-					t.Errorf("stat directory error = %v", err)
-					return
-				}
+
+			if tt.cleanup != nil {
+				tt.cleanup(t)
 			}
 		})
 	}

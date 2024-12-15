@@ -41,7 +41,7 @@ func (m *MockBlueskyClient) EXPECT() *MockBlueskyClientMockRecorder {
 }
 
 // GetMyLatestPostsCreatedAsc mocks base method.
-func (m *MockBlueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPosts int64) ([]BlueskyPost, error) {
+func (m *MockBlueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPosts int) ([]BlueskyPost, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMyLatestPostsCreatedAsc", ctx, numPosts)
 	ret0, _ := ret[0].([]BlueskyPost)
