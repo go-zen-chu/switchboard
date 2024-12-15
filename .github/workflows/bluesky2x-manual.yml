@@ -1,0 +1,40 @@
+name: bluesky2x-manual
+
+on:
+  workflow_dispatch
+
+jobs:
+  bluesky2x:
+    name: Sync Bluesky post to X
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install switchboard from github release
+        uses: sigoden/install-binary@v1
+        with:
+          repo: go-zen-chu/switchboard
+      - name: Run `switchboard bluesky2x` command to sync bluesky latest posts to X
+        run: switchboard bluesky2x
+        env:
+          # TODO: secrets below must be configured in your github repository secrets
+          BLUESKY_IDENTIFIER: ${{ secrets.BLUESKY_IDENTIFIER }}
+          BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+      - name: Check diff
+        id: diff
+        run: |
+          git add -N .
+          git diff --name-only --exit-code
+      - if: steps.diff.outcome == 'failure'
+        name: When we have diff, commit and push output
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "[skip ci] Updated output"
+          git push

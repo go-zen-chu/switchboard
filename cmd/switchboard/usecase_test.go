@@ -7,10 +7,27 @@ import (
 	"time"
 
 	"github.com/go-zen-chu/switchboard"
-	"github.com/go-zen-chu/switchboard/cmd/switchboard/cmd"
 
 	"go.uber.org/mock/gomock"
 )
+
+type switchboardRequirementsForTest struct {
+	ctx  context.Context
+	bcli switchboard.BlueskyClient
+	xcli switchboard.XClient
+}
+
+func (s *switchboardRequirementsForTest) Context() context.Context {
+	return s.ctx
+}
+
+func (s *switchboardRequirementsForTest) BlueskyClient() switchboard.BlueskyClient {
+	return s.bcli
+}
+
+func (s *switchboardRequirementsForTest) XClient() switchboard.XClient {
+	return s.xcli
+}
 
 func TestMain(t *testing.T) {
 	tests := []struct {
@@ -67,10 +84,11 @@ func TestMain(t *testing.T) {
 			if tt.customizeMock != nil {
 				tt.customizeMock(mockBCli, mockXCli)
 			}
-			app, goterr := NewApp(&cmd.SwitchboardRequirements{
-				Ctx:           context.Background(),
-				BlueskyClient: mockBCli,
-				XClient:       mockXCli,
+
+			app, goterr := NewApp(&switchboardRequirementsForTest{
+				ctx:  context.Background(),
+				bcli: mockBCli,
+				xcli: mockXCli,
 			})
 			if (goterr != nil) != tt.wantErr {
 				t.Errorf("NewApp error = %v, wantErr %v", goterr, tt.wantErr)
