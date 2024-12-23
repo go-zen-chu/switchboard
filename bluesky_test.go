@@ -37,7 +37,7 @@ func Test_replaceAbbreviatedURLToEmbedExternal(t *testing.T) {
 		{
 			name: "If URL is embeded in post, replace abbreviated URL to original URL (case2)",
 			feedPost: &bsky.FeedPost{
-				Text: "This is test text\nURL: github.com/go-... some text follows... git...",
+				Text: "This is test text\nURL: github.com/go-... some text follows... other.com/test...",
 				Embed: &bsky.FeedPost_Embed{
 					EmbedExternal: &bsky.EmbedExternal{
 						External: &bsky.EmbedExternal_External{
@@ -46,7 +46,7 @@ func Test_replaceAbbreviatedURLToEmbedExternal(t *testing.T) {
 					},
 				},
 			},
-			want: "This is test text\nURL: https://github.com/go-zen-chu/test?test=test&test1=test1 some text follows... git...",
+			want: "This is test text\nURL: https://github.com/go-zen-chu/test?test=test&test1=test1 some text follows... other.com/test...",
 		},
 	}
 	for _, tt := range tests {
