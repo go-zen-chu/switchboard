@@ -97,7 +97,7 @@ func (bc *blueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPost
 		}
 		posts = append(posts, BlueskyPost{
 			Cid:       f.Post.Cid,
-			Content:   replaceAbbreviatedURLToEmbedExternal(fp),
+			Content:   replaceAbbreviatedURLToOriginal(fp),
 			CreatedAt: ca,
 			URL:       buildPostURL(f),
 			Reply:     rep,
@@ -120,25 +120,52 @@ func buildPostURL(feed *bsky.FeedDefs_FeedViewPost) string {
 	return fmt.Sprintf("https://bsky.app/profile/%s/post/%s", uriParts[2], uriParts[4])
 }
 
-func replaceAbbreviatedURLToEmbedExternal(feedPost *bsky.FeedPost) string {
-	if feedPost.Embed == nil || feedPost.Embed.EmbedExternal == nil {
+func replaceAbbreviatedURLToOriginal(feedPost *bsky.FeedPost) string {
+	if feedPost.Facets == nil {
 		return feedPost.Text
 	}
-	embedExternal := feedPost.Embed.EmbedExternal
-	originalURLStr := embedExternal.External.Uri
-	originalURL, err := url.Parse(originalURLStr)
-	if err != nil {
-		slog.Warn("parse original url failed", "url", originalURLStr, "error", err)
-		return feedPost.Text
+	resultText := feedPost.Text
+	tokenMap := make(map[string]string)
+	tokenId := 0
+	for _, facets := range feedPost.Facets {
+		if facets.Features == nil {
+			continue
+		}
+		for _, feature := range facets.Features {
+			if feature.RichtextFacet_Link == nil {
+				continue
+			}
+			originalURLStr := feature.RichtextFacet_Link.Uri
+			originalURL, err := url.Parse(originalURLStr)
+			if err != nil {
+				slog.Warn("parse original url failed", "url", originalURLStr, "replacedText", resultText, "error", err)
+				continue
+			}
+			host := originalURL.Hostname()
+			hostRegexp := strings.ReplaceAll(host, ".", `\.`)
+			abbrevURLRegexp := hostRegexp + `.*?\.\.\.`
+			re, err := regexp.Compile(abbrevURLRegexp)
+			if err != nil {
+				slog.Warn("compile regexp failed", "regexp", abbrevURLRegexp, "replacedText", resultText, "error", err)
+				continue
+			}
+			// NOTES: temporary replace abbreviated URL with token otherwise if we have same abbreviated URL in the post, it will be misreplaced
+			// e.g. `github.com/... github.com/...` -> `https://https://github.com/test github.com/...`
+			isFirstMatch := true
+			tokenString := fmt.Sprintf("<<swbtoken%d>>", tokenId)
+			resultText = re.ReplaceAllStringFunc(resultText, func(match string) string {
+				if isFirstMatch {
+					isFirstMatch = false
+					return tokenString
+				}
+				return match
+			})
+			tokenMap[tokenString] = originalURLStr
+			tokenId++
+		}
 	}
-	host := originalURL.Hostname()
-	hostRegexp := strings.ReplaceAll(host, ".", `\.`)
-	abbrevURLRegexp := hostRegexp + `.*?\.\.\.`
-	re, err := regexp.Compile(abbrevURLRegexp)
-	if err != nil {
-		slog.Warn("compile regexp failed", "regexp", abbrevURLRegexp, "error", err)
-		return feedPost.Text
+	for token, url := range tokenMap {
+		resultText = strings.ReplaceAll(resultText, token, url)
 	}
-	replacedText := re.ReplaceAllString(feedPost.Text, originalURLStr)
-	return replacedText
+	return resultText
 }
