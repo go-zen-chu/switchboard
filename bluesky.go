@@ -4,6 +4,9 @@ package switchboard
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -92,13 +95,11 @@ func (bc *blueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPost
 				ParentCid: fp.Reply.Parent.Cid,
 			}
 		}
-		uriParts := strings.Split(string(f.Post.Uri), "/")
-		url := fmt.Sprintf("https://bsky.app/profile/%s/post/%s", uriParts[2], uriParts[4])
 		posts = append(posts, BlueskyPost{
 			Cid:       f.Post.Cid,
-			Content:   fp.Text,
+			Content:   replaceAbbreviatedURLToOriginal(fp),
 			CreatedAt: ca,
-			URL:       url,
+			URL:       buildPostURL(f),
 			Reply:     rep,
 		})
 	}
@@ -106,4 +107,65 @@ func (bc *blueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPost
 		return posts[i].CreatedAt.Before(posts[j].CreatedAt)
 	})
 	return posts, nil
+}
+
+func buildPostURL(feed *bsky.FeedDefs_FeedViewPost) string {
+	if feed.Post == nil {
+		return ""
+	}
+	uriParts := strings.Split(string(feed.Post.Uri), "/")
+	if len(uriParts) < 5 {
+		return ""
+	}
+	return fmt.Sprintf("https://bsky.app/profile/%s/post/%s", uriParts[2], uriParts[4])
+}
+
+func replaceAbbreviatedURLToOriginal(feedPost *bsky.FeedPost) string {
+	if feedPost.Facets == nil {
+		return feedPost.Text
+	}
+	resultText := feedPost.Text
+	tokenMap := make(map[string]string)
+	tokenId := 0
+	for _, facets := range feedPost.Facets {
+		if facets.Features == nil {
+			continue
+		}
+		for _, feature := range facets.Features {
+			if feature.RichtextFacet_Link == nil {
+				continue
+			}
+			originalURLStr := feature.RichtextFacet_Link.Uri
+			originalURL, err := url.Parse(originalURLStr)
+			if err != nil {
+				slog.Warn("parse original url failed", "url", originalURLStr, "replacedText", resultText, "error", err)
+				continue
+			}
+			host := originalURL.Hostname()
+			hostRegexp := strings.ReplaceAll(host, ".", `\.`)
+			abbrevURLRegexp := hostRegexp + `.*?\.\.\.`
+			re, err := regexp.Compile(abbrevURLRegexp)
+			if err != nil {
+				slog.Warn("compile regexp failed", "regexp", abbrevURLRegexp, "replacedText", resultText, "error", err)
+				continue
+			}
+			// NOTES: temporary replace abbreviated URL with token otherwise if we have same abbreviated URL in the post, it will be misreplaced
+			// e.g. `github.com/... github.com/...` -> `https://https://github.com/test github.com/...`
+			isFirstMatch := true
+			tokenString := fmt.Sprintf("<<swbtoken%d>>", tokenId)
+			resultText = re.ReplaceAllStringFunc(resultText, func(match string) string {
+				if isFirstMatch {
+					isFirstMatch = false
+					return tokenString
+				}
+				return match
+			})
+			tokenMap[tokenString] = originalURLStr
+			tokenId++
+		}
+	}
+	for token, url := range tokenMap {
+		resultText = strings.ReplaceAll(resultText, token, url)
+	}
+	return resultText
 }
