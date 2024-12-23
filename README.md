@@ -28,9 +28,6 @@ switchboard bluesky2x
 switchboard bluesky2x -v
 ```
 
-##### Features to be implemented
+## FAQ and feature list to be implemented
 
-- [ ] Support threading when bluesky post has thread
-- [ ] If post in bluesky deleted, delete post in X too
-- [ ] Split post when it has more than 140 or 280 letters due to X's limitation
-
+[Please check issues](https://github.com/go-zen-chu/switchboard/labels/enhancement)
