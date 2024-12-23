@@ -4,6 +4,9 @@ package switchboard
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -85,20 +88,11 @@ func (bc *blueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPost
 		if err != nil {
 			return nil, fmt.Errorf("parse bluesky post CreatedAt(%s): %w", fp.CreatedAt, err)
 		}
-		var rep *BlueskyReply
-		if fp.Reply != nil {
-			rep = &BlueskyReply{
-				RootCid:   fp.Reply.Root.Cid,
-				ParentCid: fp.Reply.Parent.Cid,
-			}
-		}
-		uriParts := strings.Split(string(f.Post.Uri), "/")
-		url := fmt.Sprintf("https://bsky.app/profile/%s/post/%s", uriParts[2], uriParts[4])
 		posts = append(posts, BlueskyPost{
 			Cid:       f.Post.Cid,
-			Content:   fp.Text,
+			Content:   replaceAbbreviatedURLToEmbedExternal(fp),
 			CreatedAt: ca,
-			URL:       url,
+			URL:       buildPostURL(f),
 			Reply:     rep,
 		})
 	}
@@ -106,4 +100,38 @@ func (bc *blueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPost
 		return posts[i].CreatedAt.Before(posts[j].CreatedAt)
 	})
 	return posts, nil
+}
+
+func buildPostURL(feed *bsky.FeedDefs_FeedViewPost) string {
+	if feed.Post == nil {
+		return ""
+	}
+	uriParts := strings.Split(string(feed.Post.Uri), "/")
+	if len(uriParts) < 5 {
+		return ""
+	}
+	return fmt.Sprintf("https://bsky.app/profile/%s/post/%s", uriParts[2], uriParts[4])
+}
+
+func replaceAbbreviatedURLToEmbedExternal(feedPost *bsky.FeedPost) string {
+	if feedPost.Embed == nil || feedPost.Embed.EmbedExternal == nil {
+		return feedPost.Text
+	}
+	embedExternal := feedPost.Embed.EmbedExternal
+	originalURLStr := embedExternal.External.Uri
+	originalURL, err := url.Parse(originalURLStr)
+	if err != nil {
+		slog.Warn("parse original url failed", "url", originalURLStr, "error", err)
+		return feedPost.Text
+	}
+	host := originalURL.Hostname()
+	hostRegexp := strings.ReplaceAll(host, ".", `\.`)
+	abbrevURLRegexp := hostRegexp + `.*?\.\.\.`
+	re, err := regexp.Compile(abbrevURLRegexp)
+	if err != nil {
+		slog.Warn("compile regexp failed", "regexp", abbrevURLRegexp, "error", err)
+		return feedPost.Text
+	}
+	replacedText := re.ReplaceAllString(feedPost.Text, originalURLStr)
+	return replacedText
 }
