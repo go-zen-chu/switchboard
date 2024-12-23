@@ -29,6 +29,9 @@ func NewBluesky2XCmd(req Bluesky2XCmdRequirements) *cobra.Command {
 	const defaultNumSyncLatestPosts = 10
 	var numSyncLatestPosts int
 
+	const defaultDryRun = false
+	var dryRun bool
+
 	// bluesky2xCmd represents the bluesky2x command
 	var bluesky2xCmd = &cobra.Command{
 		Use:   "bluesky2x",
@@ -44,7 +47,7 @@ func NewBluesky2XCmd(req Bluesky2XCmdRequirements) *cobra.Command {
 			ctx := req.Context()
 			bcli := req.BlueskyClient()
 			xcli := req.XClient()
-			if err := syncBlueskyLatestPosts2X(ctx, bcli, xcli, numSyncLatestPosts); err != nil {
+			if err := syncBlueskyLatestPosts2X(ctx, bcli, xcli, numSyncLatestPosts, dryRun); err != nil {
 				return fmt.Errorf("syncing bluesky latest posts to x: %w", err)
 			}
 			return nil
@@ -55,10 +58,11 @@ func NewBluesky2XCmd(req Bluesky2XCmdRequirements) *cobra.Command {
 Make sure not to exceed the rate limit (Especially, if you are using Free plan).
 https://developer.x.com/en/docs/x-api/lists/list-tweets/introduction
 `)
+	bluesky2xCmd.Flags().BoolVar(&dryRun, "dry-run", defaultDryRun, "Dry run mode. Don't send posts to X and don't update sync info")
 	return bluesky2xCmd
 }
 
-func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClient, xcli switchboard.XClient, numSyncLatestPosts int) error {
+func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClient, xcli switchboard.XClient, numSyncLatestPosts int, dryRun bool) error {
 	slog.Info("Start syncing latest posts from bluesky to X")
 	bposts, err := bcli.GetMyLatestPostsCreatedAsc(ctx, numSyncLatestPosts)
 	if err != nil {
@@ -89,6 +93,10 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 
 	for _, bpost := range newPosts {
 		cnt := fmt.Sprintf("%s\n🤖from🦋: %s", bpost.Content, bpost.URL)
+		if dryRun {
+			slog.Info("[DRY RUN] Don't send post to X", "content", cnt)
+			continue
+		}
 		xpost, err := xcli.Post(ctx, cnt)
 		if err != nil {
 			var errXDup *switchboard.ErrXDuplicatePost
@@ -112,6 +120,7 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 		}
 		slog.Debug("Updated sync info")
 	}
+
 	slog.Info("Finished syncing from bluesky to X")
 	return nil
 }
