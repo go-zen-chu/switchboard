@@ -88,6 +88,13 @@ func (bc *blueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPost
 		if err != nil {
 			return nil, fmt.Errorf("parse bluesky post CreatedAt(%s): %w", fp.CreatedAt, err)
 		}
+		var rep *BlueskyReply
+		if fp.Reply != nil {
+			rep = &BlueskyReply{
+				RootCid:   fp.Reply.Root.Cid,
+				ParentCid: fp.Reply.Parent.Cid,
+			}
+		}
 		posts = append(posts, BlueskyPost{
 			Cid:       f.Post.Cid,
 			Content:   replaceAbbreviatedURLToEmbedExternal(fp),
