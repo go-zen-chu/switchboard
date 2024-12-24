@@ -13,9 +13,6 @@ import (
 const currentVersion = "0.0.6"
 const currentTagVersion = "v" + currentVersion
 
-const imageRegistry = "amasuda"
-const repository = "switchboard"
-
 func init() {
 	// by default, magefile does not output stderr
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
