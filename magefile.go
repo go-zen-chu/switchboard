@@ -4,13 +4,14 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
 	gbt "github.com/go-zen-chu/go-build-tools"
 )
 
-const currentVersion = "0.0.6"
+const currentVersion = "0.0.7"
 const currentTagVersion = "v" + currentVersion
 
 func init() {
@@ -21,5 +22,10 @@ func init() {
 
 // GitPushTag pushes current tag to remote repository
 func GitPushTag(releaseComment string) error {
-	return gbt.GitPushTag(currentTagVersion, releaseComment)
+	err := gbt.GitPushTag(currentTagVersion, releaseComment)
+	if err != nil {
+		return fmt.Errorf("git push tag: %w", err)
+	}
+	slog.Info("successfully git push tag", "tag", currentTagVersion)
+	return nil
 }
