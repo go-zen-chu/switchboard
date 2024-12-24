@@ -4,6 +4,7 @@ go 1.23
 
 require (
 	github.com/bluesky-social/indigo v0.0.0-20241008040750-06bacb465af7
+	github.com/go-zen-chu/go-build-tools v0.0.0-20240929035559-91e20c6456d7
 	github.com/michimani/gotwi v0.16.1
 	github.com/spf13/cobra v1.8.1
 	go.uber.org/mock v0.5.0

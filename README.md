@@ -31,3 +31,13 @@ switchboard bluesky2x -v
 ## FAQ and feature list to be implemented
 
 [Please check issues](https://github.com/go-zen-chu/switchboard/labels/enhancement)
+
+## Development
+
+Using mage to make development easy
+
+```console
+# update release tag in main
+git commit -am "commit something"
+go run mage.go gitPushTag "release comment here"
+```
