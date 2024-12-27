@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
@@ -96,7 +95,7 @@ func (bc *blueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPost
 				ParentCid: fp.Reply.Parent.Cid,
 			}
 		}
-		urlReplacedContent := replaceAbbreviatedURLToOriginal(fp)
+		// urlReplacedContent := replaceAbbreviatedURLToOriginal(fp)
 
 		posts = append(posts, BlueskyPost{
 			Cid:       f.Post.Cid,
@@ -171,16 +170,4 @@ func replaceAbbreviatedURLToOriginal(feedPost *bsky.FeedPost) string {
 		resultText = strings.ReplaceAll(resultText, token, url)
 	}
 	return resultText
-}
-
-// countPostLettersAndDivide splits the post content into multiple parts if it is longer than 140 characters
-// unfortunately, counting length for X is complicated, so this function not work perfectly
-// https://developer.x.com/en/docs/counting-characters
-func countPostLettersAndDivide(postContent string) []string {
-	utf8Count := utf8.RuneCountInString(postContent)
-	if utf8Count <= 140 {
-		return []string{postContent}
-	}
-	strings.Count()
-	return strings.Split(postContent, " ")
 }
