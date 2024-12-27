@@ -99,8 +99,8 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 		bContent := bpost.Content
 		// Truncate content to X tweet length limit
 		contentLength := switchboard.CountTweetCharacters(bpost.Content)
-		// -3 is for "..."
-		if contentLength > switchboard.XMaxTweetLength-linkToBlueskySuffixLength-3 {
+
+		if contentLength > switchboard.XMaxTweetLength-linkToBlueskySuffixLength {
 			bContent = switchboard.TruncateTweet(bpost.Content, linkToBlueskySuffixLength)
 		}
 		cnt := fmt.Sprintf("%s%s%s", bContent, linkToBlueskySuffixHeader, bpost.URL)
