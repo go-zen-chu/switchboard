@@ -192,8 +192,8 @@ func TestMain(t *testing.T) {
 							Reply:     nil,
 						},
 					}, nil)
-				truncatedText1 := strings.Repeat("x", 243) + "...\n🤖from🦋:" + test1URL
-				truncatedText2 := strings.Repeat("あ", 143) + "...\n🤖from🦋:" + test2URL
+				truncatedText1 := strings.Repeat("x", 242) + "...\n🤖from🦋:" + test1URL
+				truncatedText2 := strings.Repeat("あ", 121) + "...\n🤖from🦋:" + test2URL
 				gomock.InOrder(
 					mockXCli.EXPECT().Post(gomock.Any(), truncatedText1).
 						Return(&switchboard.XPost{

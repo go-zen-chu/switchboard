@@ -142,7 +142,6 @@ func TruncateTweet(content string, suffixLength int) string {
 		}
 		// when countX surpassed the limit, truncate normText with one character before
 		if countX >= XMaxTweetLength-suffixLength-len(ellipsis) {
-			fmt.Printf("len(content): %d, len(normText): %d, countX: %d, countStr: %d, string: %s\n", len(content), len(normText), countX, countStr, normText[:countStr])
 			return normText[:countStr] + ellipsis
 		}
 		countStr += len(string(r))

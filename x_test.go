@@ -64,16 +64,15 @@ func TestTruncateTweet(t *testing.T) {
 				content:      strings.Repeat("x", 300),
 				suffixLength: 34,
 			},
-			want: strings.Repeat("x", 243) + "...",
+			want: strings.Repeat("x", 242) + "...",
 		},
-		// 要修正。日本語だと 140 - 34 - 3 = 103 の長さになる
 		{
 			name: "If emoji and CJK characters with more than maxLength, return truncated text",
 			args: args{
 				content:      strings.Repeat("あ", 150),
 				suffixLength: 34,
 			},
-			want: strings.Repeat("あ", 103) + "...",
+			want: strings.Repeat("あ", 121) + "...",
 		},
 	}
 	for _, tt := range tests {
