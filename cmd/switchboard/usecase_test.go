@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -87,14 +88,12 @@ func TestMain(t *testing.T) {
 							Content:   "test1",
 							CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 							URL:       "https://bsky.app/profile/did:plc:test1test1test1test1/post/test1test1",
-							Reply:     nil,
 						},
 						{
 							Cid:       "test2test2test2test2test2test2test2test2test2test2test2test2",
 							Content:   "test2",
 							CreatedAt: time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC),
 							URL:       "https://bsky.app/profile/did:plc:test2test2test2test2/post/test2test2",
-							Reply:     nil,
 						},
 					}, nil)
 				mockXCli.EXPECT().Post(gomock.Any(), gomock.Regex("test1.*")).
@@ -166,6 +165,45 @@ func TestMain(t *testing.T) {
 							},
 						},
 					})
+			},
+			wantErr: false,
+			cleanup: cleanupOutputDir,
+		},
+		{
+			name: "If bluesky2x subcommand got bluesky post longer than approx 280, truncate post",
+			args: []string{"switchboard", "bluesky2x"},
+			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient) {
+				test1URL := "https://bsky.app/profile/did:plc:test1test1test1test1/post/test1test1"
+				test2URL := "https://bsky.app/profile/did:plc:test2test2test2test2/post/test2test2"
+				mockBCli.EXPECT().GetMyLatestPostsCreatedAsc(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]switchboard.BlueskyPost{
+						{
+							Cid:       "test1test1test1test1test1test1test1test1test1test1test1test1",
+							Content:   strings.Repeat("x", 300),
+							CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+							URL:       test1URL,
+						},
+						{
+							Cid:       "test2test2test2test2test2test2test2test2test2test2test2test2",
+							Content:   strings.Repeat("あ", 150),
+							CreatedAt: time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC),
+							URL:       test2URL,
+							Reply:     nil,
+						},
+					}, nil)
+				truncatedText1 := strings.Repeat("x", 242) + "...\n🤖from🦋:" + test1URL
+				truncatedText2 := strings.Repeat("あ", 121) + "...\n🤖from🦋:" + test2URL
+				gomock.InOrder(
+					mockXCli.EXPECT().Post(gomock.Any(), truncatedText1).
+						Return(&switchboard.XPost{
+							ID: "1111111111111111111",
+						}, nil),
+					mockXCli.EXPECT().Post(gomock.Any(), truncatedText2).
+						Return(&switchboard.XPost{
+							ID: "2222222222222222222",
+						}, nil),
+				)
 			},
 			wantErr: false,
 			cleanup: cleanupOutputDir,
