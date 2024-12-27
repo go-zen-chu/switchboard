@@ -104,7 +104,8 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 				slog.Warn("Found duplicate tweet in X", "content", cnt)
 				continue
 			}
-			return fmt.Errorf("post tweet: %w\n", err)
+			slog.Warn("Get error while posting tweet", "content", cnt, "error", err)
+			continue
 		}
 		slog.Debug("Posted tweet", "cid", bpost.Cid, "tweet id", xpost.ID, "content", cnt)
 
