@@ -91,17 +91,19 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 		return nil
 	}
 
-	const linkToBlueskySuffixHeader = "🤖from🦋:"
-	const linkToBlueskySuffixLength = len(linkToBlueskySuffixHeader) + switchboard.XShortenedLinkLength
+	const linkToBlueskySuffixHeader = "\n🤖from🦋:"
+	// newline, emoji counted as 2 characters in X
+	const linkToBlueskySuffixLength = 11 + switchboard.XShortenedLinkLength
 
 	for _, bpost := range newPosts {
 		bContent := bpost.Content
 		// Truncate content to X tweet length limit
 		contentLength := switchboard.CountTweetCharacters(bpost.Content)
 		if contentLength > switchboard.XMaxTweetLength-linkToBlueskySuffixLength {
+			//TODO: -3 may break 2byte letters
 			bContent = bContent[:switchboard.XMaxTweetLength-linkToBlueskySuffixLength-3] + "..."
 		}
-		cnt := fmt.Sprintf("%s\n🤖from🦋: %s", bContent, bpost.URL)
+		cnt := fmt.Sprintf("%s%s%s", bContent, linkToBlueskySuffixHeader, bpost.URL)
 		if dryRun {
 			slog.Info("[DRY RUN] Don't send post to X", "content", cnt)
 			continue

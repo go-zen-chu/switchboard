@@ -111,17 +111,41 @@ var (
 func CountTweetCharacters(content string) int {
 	normText := norm.NFC.String(content)
 	// X count any URL to 23 characters
-	urlReplacedText := urlRegex.ReplaceAllString(normText, strings.Repeat("x", 23))
-	count := 0
+	urlReplacedText := urlRegex.ReplaceAllString(normText, strings.Repeat("x", XShortenedLinkLength))
+	countX := 0
 	for _, r := range urlReplacedText {
 		switch {
 		case emojiRegex.MatchString(string(r)):
-			count += 2
+			countX += 2
 		case cjkRegex.MatchString(string(r)):
-			count += 2
+			countX += 2
 		default:
-			count++
+			countX++
 		}
 	}
-	return count
+	return countX
+}
+
+func TruncateTweet(content string, suffixLength int) string {
+	ellipsis := "..."
+	normText := norm.NFC.String(content)
+	countX := 0
+	countStr := 0
+	for _, r := range normText {
+		switch {
+		case emojiRegex.MatchString(string(r)):
+			countX += 2
+		case cjkRegex.MatchString(string(r)):
+			countX += 2
+		default:
+			countX++
+		}
+		// when countX surpassed the limit, truncate normText with one character before
+		if countX >= XMaxTweetLength-suffixLength-len(ellipsis) {
+			fmt.Printf("len(content): %d, len(normText): %d, countX: %d, countStr: %d, string: %s\n", len(content), len(normText), countX, countStr, normText[:countStr])
+			return normText[:countStr] + ellipsis
+		}
+		countStr += len(string(r))
+	}
+	return content
 }
