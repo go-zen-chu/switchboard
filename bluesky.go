@@ -95,7 +95,6 @@ func (bc *blueskyClient) GetMyLatestPostsCreatedAsc(ctx context.Context, numPost
 				ParentCid: fp.Reply.Parent.Cid,
 			}
 		}
-
 		posts = append(posts, BlueskyPost{
 			Cid:       f.Post.Cid,
 			Content:   replaceAbbreviatedURLToOriginal(fp),
