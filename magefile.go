@@ -11,7 +11,7 @@ import (
 	gbt "github.com/go-zen-chu/go-build-tools"
 )
 
-const currentVersion = "0.0.7"
+const currentVersion = "0.0.8"
 const currentTagVersion = "v" + currentVersion
 
 func init() {

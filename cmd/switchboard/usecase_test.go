@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/go-zen-chu/switchboard"
+	"github.com/michimani/gotwi"
+	"github.com/michimani/gotwi/resources"
 
 	"go.uber.org/mock/gomock"
 )
@@ -30,6 +33,36 @@ func (s *switchboardRequirementsForTest) XClient() switchboard.XClient {
 }
 
 func TestMain(t *testing.T) {
+
+	cleanupOutputDir := func(t *testing.T) {
+		if _, err := os.Stat("output"); err == nil {
+			err = os.RemoveAll("output")
+			if err != nil {
+				t.Errorf("cleanup remove ./output error = %v", err)
+				return
+			}
+		} else {
+			if !os.IsNotExist(err) {
+				t.Errorf("stat directory error = %v", err)
+				return
+			}
+		}
+	}
+	cleanupGitHubDir := func(t *testing.T) {
+		if _, err := os.Stat(".github"); err == nil {
+			err = os.RemoveAll(".github")
+			if err != nil {
+				t.Errorf("cleanup remove ./.github error = %v", err)
+				return
+			}
+		} else {
+			if !os.IsNotExist(err) {
+				t.Errorf("stat directory error = %v", err)
+				return
+			}
+		}
+	}
+
 	tests := []struct {
 		name          string
 		args          []string
@@ -74,39 +107,74 @@ func TestMain(t *testing.T) {
 					}, nil)
 			},
 			wantErr: false,
-			cleanup: func(t *testing.T) {
-				if _, err := os.Stat("output"); err == nil {
-					err = os.RemoveAll("output")
-					if err != nil {
-						t.Errorf("cleanup remove ./output error = %v", err)
-						return
-					}
-				} else {
-					if !os.IsNotExist(err) {
-						t.Errorf("stat directory error = %v", err)
-						return
-					}
-				}
+			cleanup: cleanupOutputDir,
+		},
+		{
+			name: "If bluesky2x subcommand got forbidden error from X API, warn the error but continue",
+			args: []string{"switchboard", "bluesky2x"},
+			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient) {
+				mockBCli.EXPECT().GetMyLatestPostsCreatedAsc(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]switchboard.BlueskyPost{
+						{
+							Cid:       "test1test1test1test1test1test1test1test1test1test1test1test1",
+							Content:   "test1",
+							CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+							URL:       "https://bsky.app/profile/did:plc:test1test1test1test1/post/test1test1",
+							Reply:     nil,
+						},
+						{
+							Cid:       "test2test2test2test2test2test2test2test2test2test2test2test2",
+							Content:   "test2",
+							CreatedAt: time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC),
+							URL:       "https://bsky.app/profile/did:plc:test2test2test2test2/post/test2test2",
+							Reply:     nil,
+						},
+					}, nil)
+				mockXCli.EXPECT().Post(gomock.Any(), gomock.Regex("test1.*")).
+					Return(nil, errors.New("403 Forbidden error from X"))
+				mockXCli.EXPECT().Post(gomock.Any(), gomock.Regex("test2.*")).
+					Return(&switchboard.XPost{
+						ID: "2222222222222222222",
+					}, nil)
 			},
+			wantErr: false,
+			cleanup: cleanupOutputDir,
+		},
+		{
+			name: "If bluesky2x subcommand got forbidden (duplicate post) error from X API, warn the error but continue",
+			args: []string{"switchboard", "bluesky2x"},
+			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient) {
+				mockBCli.EXPECT().GetMyLatestPostsCreatedAsc(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]switchboard.BlueskyPost{
+						{
+							Cid:       "test1test1test1test1test1test1test1test1test1test1test1test1",
+							Content:   "test1",
+							CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+							URL:       "https://bsky.app/profile/did:plc:test1test1test1test1/post/test1test1",
+							Reply:     nil,
+						},
+					}, nil)
+				mockXCli.EXPECT().Post(gomock.Any(), gomock.Regex("test1.*")).
+					Return(nil, &switchboard.ErrXDuplicatePost{
+						GoTwiError: &gotwi.GotwiError{
+							Non2XXError: resources.Non2XXError{
+								StatusCode: 403,
+								Title:      "Forbidden",
+								Detail:     "You are not allowed to create a Tweet with duplicate content",
+							},
+						},
+					})
+			},
+			wantErr: false,
+			cleanup: cleanupOutputDir,
 		},
 		{
 			name:    "If bluesky2x --gen-workflow-file subcommand used, generate workflow files",
 			args:    []string{"switchboard", "bluesky2x", "--gen-workflow-file"},
 			wantErr: false,
-			cleanup: func(t *testing.T) {
-				if _, err := os.Stat(".github"); err == nil {
-					err = os.RemoveAll(".github")
-					if err != nil {
-						t.Errorf("cleanup remove ./.github error = %v", err)
-						return
-					}
-				} else {
-					if !os.IsNotExist(err) {
-						t.Errorf("stat directory error = %v", err)
-						return
-					}
-				}
-			},
+			cleanup: cleanupGitHubDir,
 		},
 	}
 	for _, tt := range tests {
@@ -114,7 +182,6 @@ func TestMain(t *testing.T) {
 			c := gomock.NewController(t)
 			mockBCli := switchboard.NewMockBlueskyClient(c)
 			mockXCli := switchboard.NewMockXClient(c)
-
 			if tt.customizeMock != nil {
 				tt.customizeMock(mockBCli, mockXCli)
 			}
