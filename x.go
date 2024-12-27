@@ -91,3 +91,6 @@ func (c *xclient) Post(ctx context.Context, content string) (*XPost, error) {
 	}
 	return p, nil
 }
+
+func countXCharacters(content string) int {
+	
