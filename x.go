@@ -71,7 +71,6 @@ func NewXClient(ctx context.Context, oauthToken, oauthTokenSecret, apiKey, apiKe
 }
 
 func (c *xclient) Post(ctx context.Context, content string) (*XPost, error) {
-	// TODO: content length must be < 280 letters
 	ci := &types.CreateInput{
 		Text: gotwi.String(content),
 	}
