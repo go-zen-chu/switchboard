@@ -61,18 +61,21 @@ func TestTruncateTweet(t *testing.T) {
 		{
 			name: "If only ascii characters with more than maxLength, return truncated text",
 			args: args{
+				// obviously longer than XMaxTweetLength
 				content:      strings.Repeat("x", 300),
 				suffixLength: 34,
 			},
-			want: strings.Repeat("x", 242) + "...",
+			want: strings.Repeat("x", 202) + "...",
 		},
 		{
 			name: "If emoji and CJK characters with more than maxLength, return truncated text",
 			args: args{
+				// CJK characters counted as 2 so this is longer than XMaxTweetLength
 				content:      strings.Repeat("あ", 150),
 				suffixLength: 34,
 			},
-			want: strings.Repeat("あ", 121) + "...",
+			// 280 - 40(offset) - 34 (suffixLength) - 3 (ellipsis) = 202 / 2(CJK) = 101
+			want: strings.Repeat("あ", 101) + "...",
 		},
 	}
 	for _, tt := range tests {

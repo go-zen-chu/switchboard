@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	XMaxTweetLength      = 280
+	// Experimental: Actual limit is 280 but we subtract 40 for offset because counting chars is not accurate
+	XMaxTweetLength      = 280 - 40
 	XShortenedLinkLength = 23
 )
 
