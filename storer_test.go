@@ -1,6 +1,7 @@
 package switchboard
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -44,9 +45,9 @@ func TestStorer_TrimHistoryIfNeeded(t *testing.T) {
 			// Create test posts
 			for i := 0; i < tt.numPosts; i++ {
 				stor.SyncInfo.Posts = append(stor.SyncInfo.Posts, PostInfo{
-					BlueskyCid:           "test-cid-" + string(rune(i)),
-					TweetID:              "test-tweet-" + string(rune(i)),
-					Content:              "This is test content for post number " + string(rune(i)),
+					BlueskyCid:           fmt.Sprintf("test-cid-%d", i),
+					TweetID:              fmt.Sprintf("test-tweet-%d", i),
+					Content:              fmt.Sprintf("This is test content for post number %d", i),
 					BlueskyPostCreatedAt: time.Now().Add(time.Duration(i) * time.Minute),
 				})
 			}
@@ -110,11 +111,6 @@ func TestStorer_CalculateSyncInfoSize(t *testing.T) {
 }
 
 func TestStorer_StoreSyncInfoWithTrimming(t *testing.T) {
-	// Use a temporary directory for testing
-	originalPath := syncInfoPath
-	testPath := "./test_output/sync_info.json"
-	// We can't change the constant, so we'll use the original path but clean it up
-
 	defer func() {
 		// Clean up
 		os.RemoveAll("./output")
@@ -125,9 +121,9 @@ func TestStorer_StoreSyncInfoWithTrimming(t *testing.T) {
 	// Add many posts to exceed the limit
 	for i := 0; i < 50; i++ {
 		stor.SyncInfo.Posts = append(stor.SyncInfo.Posts, PostInfo{
-			BlueskyCid:           "test-cid-" + string(rune(i)),
-			TweetID:              "test-tweet-" + string(rune(i)),
-			Content:              "This is test content for post number " + string(rune(i)) + " with some additional text to increase size",
+			BlueskyCid:           fmt.Sprintf("test-cid-%d", i),
+			TweetID:              fmt.Sprintf("test-tweet-%d", i),
+			Content:              fmt.Sprintf("This is test content for post number %d with some additional text to increase size", i),
 			BlueskyPostCreatedAt: time.Now().Add(time.Duration(i) * time.Minute),
 		})
 	}
@@ -154,9 +150,6 @@ func TestStorer_StoreSyncInfoWithTrimming(t *testing.T) {
 	if len(stor.SyncInfo.Posts) >= 50 {
 		t.Errorf("Expected posts to be trimmed, but got %d posts", len(stor.SyncInfo.Posts))
 	}
-
-	_ = testPath
-	_ = originalPath
 }
 
 func TestNewStorerWithMaxSize(t *testing.T) {
