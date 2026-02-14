@@ -121,13 +121,24 @@ func (s *Storer) trimHistoryIfNeeded() error {
 	// This is enforced by the sync workflow which appends new posts to the end
 	// We trim from the beginning to preserve the most recent posts
 	
+	// Handle edge case of empty posts
+	if len(s.SyncInfo.Posts) == 0 {
+		return nil
+	}
+	
 	// Binary search to find approximately how many posts to keep
 	// Start by trying to keep half, then adjust
 	low, high := 0, len(s.SyncInfo.Posts)
 	targetKeepCount := len(s.SyncInfo.Posts)
 	
-	for low <= high && len(s.SyncInfo.Posts) > 0 {
+	for low <= high {
 		mid := (low + high) / 2
+		
+		// Skip mid=0 case as it would result in empty slice
+		if mid == 0 {
+			low = 1
+			continue
+		}
 		
 		// Temporarily trim to mid posts from the end
 		originalPosts := s.SyncInfo.Posts

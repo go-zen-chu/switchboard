@@ -59,6 +59,17 @@ func TestStorer_TrimHistoryIfNeeded(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:                "no error with empty posts",
+			maxHistorySizeBytes: 1024,
+			numPosts:            0,
+			wantErr:             false,
+			checkFunc: func(t *testing.T, stor *Storer, originalNumPosts int) {
+				if len(stor.SyncInfo.Posts) != 0 {
+					t.Errorf("Expected 0 posts with empty input, got %d posts", len(stor.SyncInfo.Posts))
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
