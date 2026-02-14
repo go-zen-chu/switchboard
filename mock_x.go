@@ -40,6 +40,20 @@ func (m *MockXClient) EXPECT() *MockXClientMockRecorder {
 	return m.recorder
 }
 
+// Delete mocks base method.
+func (m *MockXClient) Delete(ctx context.Context, tweetID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, tweetID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockXClientMockRecorder) Delete(ctx, tweetID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockXClient)(nil).Delete), ctx, tweetID)
+}
+
 // Post mocks base method.
 func (m *MockXClient) Post(ctx context.Context, content string) (*XPost, error) {
 	m.ctrl.T.Helper()

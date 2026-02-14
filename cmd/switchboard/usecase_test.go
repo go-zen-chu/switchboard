@@ -67,6 +67,7 @@ func TestMain(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          []string
+		setup         func(t *testing.T)
 		customizeMock func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient)
 		wantErr       bool
 		cleanup       func(t *testing.T)
@@ -210,6 +211,55 @@ func TestMain(t *testing.T) {
 			cleanup: cleanupOutputDir,
 		},
 		{
+			name: "If bluesky post was deleted, delete corresponding X post",
+			args: []string{"switchboard", "bluesky2x"},
+			setup: func(t *testing.T) {
+				// Pre-populate sync_info.json with two posts
+				if err := os.MkdirAll("output", 0755); err != nil {
+					t.Fatalf("failed to create output dir: %v", err)
+				}
+				// Create a sync_info.json with two previously synced posts
+				stor := switchboard.NewStorer()
+				stor.SyncInfo.Posts = []switchboard.PostInfo{
+					{
+						BlueskyCid:           "test1cid",
+						BlueskyPostCreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+						TweetID:              "1111111111111111111",
+						Content:              "test1",
+						Status:               switchboard.PostStatusSynced,
+					},
+					{
+						BlueskyCid:           "test2cid",
+						BlueskyPostCreatedAt: time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC),
+						TweetID:              "2222222222222222222",
+						Content:              "test2",
+						Status:               switchboard.PostStatusSynced,
+					},
+				}
+				if err := stor.StoreSyncInfo(); err != nil {
+					t.Fatalf("failed to store sync info: %v", err)
+				}
+			},
+			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient) {
+				// Now only test2 is in the feed - test1 was deleted
+				mockBCli.EXPECT().GetMyLatestPostsCreatedAsc(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]switchboard.BlueskyPost{
+						{
+							Cid:       "test2cid",
+							Content:   "test2",
+							CreatedAt: time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC),
+							URL:       "https://bsky.app/profile/did:plc:test2/post/test2",
+						},
+					}, nil)
+				// test1 was previously synced but is no longer in the feed, so it should be deleted
+				mockXCli.EXPECT().Delete(gomock.Any(), "1111111111111111111").
+					Return(nil)
+			},
+			wantErr: false,
+			cleanup: cleanupOutputDir,
+		},
+		{
 			name:    "If bluesky2x --gen-workflow-file subcommand used, generate workflow files",
 			args:    []string{"switchboard", "bluesky2x", "--gen-workflow-file"},
 			wantErr: false,
@@ -218,6 +268,10 @@ func TestMain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.setup != nil {
+				tt.setup(t)
+			}
+			
 			c := gomock.NewController(t)
 			mockBCli := switchboard.NewMockBlueskyClient(c)
 			mockXCli := switchboard.NewMockXClient(c)
