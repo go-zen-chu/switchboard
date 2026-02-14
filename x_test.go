@@ -146,6 +146,18 @@ func TestSplitContentForTweets(t *testing.T) {
 				strings.Repeat("あ", 27),
 			},
 		},
+		{
+			name: "If content needs more than 2 chunks, subsequent chunks use full limit",
+			args: args{
+				content:      strings.Repeat("x", 500),
+				suffixLength: 34,
+			},
+			want: []string{
+				strings.Repeat("x", 206), // First chunk: 240 - 34 = 206
+				strings.Repeat("x", 240), // Second chunk: full 240
+				strings.Repeat("x", 54),  // Third chunk: remaining 54
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

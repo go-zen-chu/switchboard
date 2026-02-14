@@ -162,13 +162,16 @@ func TruncateTweet(content string, suffixLength int) string {
 	return content
 }
 
-// SplitContentForTweets splits content into multiple chunks that fit within X's tweet length limit
-// Each chunk respects the character count limit considering the suffix length
+// SplitContentForTweets splits content into multiple chunks that fit within X's tweet length limit.
+// The suffixLength parameter represents additional content (e.g., URL link) appended to the first tweet only.
+// Returns a slice of content chunks. If content fits in a single tweet, returns a single-element slice.
+// First chunk is limited by (XMaxTweetLength - suffixLength), subsequent chunks use full XMaxTweetLength.
 func SplitContentForTweets(content string, suffixLength int) []string {
 	normText := norm.NFC.String(content)
 	var chunks []string
 	currentChunk := ""
 	currentCount := 0
+	isFirstChunk := true
 
 	for _, r := range normText {
 		charWeight := 1
@@ -179,12 +182,19 @@ func SplitContentForTweets(content string, suffixLength int) []string {
 			charWeight = 2
 		}
 
+		// First chunk needs to account for suffix, subsequent chunks don't
+		maxLength := XMaxTweetLength
+		if isFirstChunk {
+			maxLength = XMaxTweetLength - suffixLength
+		}
+
 		// Check if adding this character would exceed the limit
-		if currentCount+charWeight > XMaxTweetLength-suffixLength {
+		if currentCount+charWeight > maxLength {
 			// Save current chunk and start a new one
 			chunks = append(chunks, currentChunk)
 			currentChunk = string(r)
 			currentCount = charWeight
+			isFirstChunk = false
 		} else {
 			currentChunk += string(r)
 			currentCount += charWeight
