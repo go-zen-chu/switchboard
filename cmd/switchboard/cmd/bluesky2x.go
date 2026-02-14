@@ -102,7 +102,7 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 		if contentLength > switchboard.XMaxTweetLength-linkToBlueskySuffixLength {
 			// Split content into multiple tweets with replies
 			chunks := switchboard.SplitContentForTweets(bpost.Content, linkToBlueskySuffixLength)
-			
+
 			var firstPostID string
 			for i, chunk := range chunks {
 				var cnt string
@@ -113,12 +113,12 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 					// Continuation tweets just have the content
 					cnt = chunk
 				}
-				
+
 				if dryRun {
 					slog.Info("[DRY RUN] Don't send post to X", "content", cnt, "part", i+1, "of", len(chunks))
 					continue
 				}
-				
+
 				var xpost *switchboard.XPost
 				var err error
 				if i == 0 {
@@ -128,7 +128,7 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 					// Reply to the first post
 					xpost, err = xcli.PostWithReply(ctx, cnt, firstPostID)
 				}
-				
+
 				if err != nil {
 					var errXDup *switchboard.ErrXDuplicatePost
 					if errors.As(err, &errXDup) {
@@ -138,11 +138,11 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 					slog.Warn("Get error while posting tweet", "content", cnt, "error", err)
 					break
 				}
-				
+
 				if i == 0 {
 					firstPostID = xpost.ID
 					slog.Debug("Posted first tweet", "cid", bpost.Cid, "tweet id", xpost.ID, "content", cnt)
-					
+
 					// Store sync info for the first post
 					stor.SyncInfo.Posts = append(stor.SyncInfo.Posts, switchboard.PostInfo{
 						BlueskyCid:           bpost.Cid,

@@ -196,12 +196,12 @@ func TestMain(t *testing.T) {
 				// First chunk: 206 chars (240 - 34 = 206)
 				firstChunk1 := strings.Repeat("x", 206) + "\n🤖from🦋:" + test1URL
 				secondChunk1 := strings.Repeat("x", 94) // remaining 94 chars
-				
+
 				// For 150 'あ' characters (each counts as 2), total count = 300
 				// First chunk: 103 chars (206 / 2 = 103 for CJK)
 				firstChunk2 := strings.Repeat("あ", 103) + "\n🤖from🦋:" + test2URL
 				secondChunk2 := strings.Repeat("あ", 47) // remaining 47 chars
-				
+
 				gomock.InOrder(
 					// First post - first chunk
 					mockXCli.EXPECT().Post(gomock.Any(), firstChunk1).
