@@ -169,7 +169,6 @@ func SplitContentForTweets(content string, suffixLength int) []string {
 	var chunks []string
 	currentChunk := ""
 	currentCount := 0
-	currentByteLen := 0
 
 	for _, r := range normText {
 		charWeight := 1
@@ -186,11 +185,9 @@ func SplitContentForTweets(content string, suffixLength int) []string {
 			chunks = append(chunks, currentChunk)
 			currentChunk = string(r)
 			currentCount = charWeight
-			currentByteLen = len(string(r))
 		} else {
 			currentChunk += string(r)
 			currentCount += charWeight
-			currentByteLen += len(string(r))
 		}
 	}
 
