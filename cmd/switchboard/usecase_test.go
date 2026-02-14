@@ -170,7 +170,7 @@ func TestMain(t *testing.T) {
 			cleanup: cleanupOutputDir,
 		},
 		{
-			name: "If bluesky2x subcommand got bluesky post longer than approx 280, truncate post",
+			name: "If bluesky2x subcommand got bluesky post longer than approx 280, divide post with reply",
 			args: []string{"switchboard", "bluesky2x"},
 			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient) {
 				test1URL := "https://bsky.app/profile/did:plc:test1test1test1test1/post/test1test1"
@@ -192,17 +192,36 @@ func TestMain(t *testing.T) {
 							Reply:     nil,
 						},
 					}, nil)
-				truncatedText1 := strings.Repeat("x", 202) + "...\n🤖from🦋:" + test1URL
-				// 280 - 40(offset) - 34 (suffixLength) - 3 (ellipsis) = 202 / 2(CJK) = 101
-				truncatedText2 := strings.Repeat("あ", 101) + "...\n🤖from🦋:" + test2URL
+				// For 300 'x' characters with suffix length 34
+				// First chunk: 206 chars (240 - 34 = 206)
+				firstChunk1 := strings.Repeat("x", 206) + "\n🤖from🦋:" + test1URL
+				secondChunk1 := strings.Repeat("x", 94) // remaining 94 chars
+				
+				// For 150 'あ' characters (each counts as 2), total count = 300
+				// First chunk: 103 chars (206 / 2 = 103 for CJK)
+				firstChunk2 := strings.Repeat("あ", 103) + "\n🤖from🦋:" + test2URL
+				secondChunk2 := strings.Repeat("あ", 47) // remaining 47 chars
+				
 				gomock.InOrder(
-					mockXCli.EXPECT().Post(gomock.Any(), truncatedText1).
+					// First post - first chunk
+					mockXCli.EXPECT().Post(gomock.Any(), firstChunk1).
 						Return(&switchboard.XPost{
 							ID: "1111111111111111111",
 						}, nil),
-					mockXCli.EXPECT().Post(gomock.Any(), truncatedText2).
+					// First post - second chunk (reply)
+					mockXCli.EXPECT().PostWithReply(gomock.Any(), secondChunk1, "1111111111111111111").
+						Return(&switchboard.XPost{
+							ID: "1111111111111111112",
+						}, nil),
+					// Second post - first chunk
+					mockXCli.EXPECT().Post(gomock.Any(), firstChunk2).
 						Return(&switchboard.XPost{
 							ID: "2222222222222222222",
+						}, nil),
+					// Second post - second chunk (reply)
+					mockXCli.EXPECT().PostWithReply(gomock.Any(), secondChunk2, "2222222222222222222").
+						Return(&switchboard.XPost{
+							ID: "2222222222222222223",
 						}, nil),
 				)
 			},

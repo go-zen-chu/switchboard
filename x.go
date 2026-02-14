@@ -37,6 +37,7 @@ func (e *ErrXDuplicatePost) Error() string {
 
 type XClient interface {
 	Post(ctx context.Context, content string) (*XPost, error)
+	PostWithReply(ctx context.Context, content string, inReplyToTweetID string) (*XPost, error)
 }
 
 type xclient struct {
@@ -71,10 +72,22 @@ func NewXClient(ctx context.Context, oauthToken, oauthTokenSecret, apiKey, apiKe
 }
 
 func (c *xclient) Post(ctx context.Context, content string) (*XPost, error) {
+	return c.post(ctx, content, "")
+}
+
+func (c *xclient) PostWithReply(ctx context.Context, content string, inReplyToTweetID string) (*XPost, error) {
+	return c.post(ctx, content, inReplyToTweetID)
+}
+
+func (c *xclient) post(ctx context.Context, content string, inReplyToTweetID string) (*XPost, error) {
 	ci := &types.CreateInput{
 		Text: gotwi.String(content),
 	}
-	// TODO: support reply
+	if inReplyToTweetID != "" {
+		ci.Reply = &types.CreateInputReply{
+			InReplyToTweetID: inReplyToTweetID,
+		}
+	}
 	res, err := managetweet.Create(ctx, c.gotwiCli, ci)
 	if err != nil {
 		ge := err.(*gotwi.GotwiError)
@@ -147,4 +160,44 @@ func TruncateTweet(content string, suffixLength int) string {
 		countStr += len(string(r))
 	}
 	return content
+}
+
+// SplitContentForTweets splits content into multiple chunks that fit within X's tweet length limit
+// Each chunk respects the character count limit considering the suffix length
+func SplitContentForTweets(content string, suffixLength int) []string {
+	normText := norm.NFC.String(content)
+	var chunks []string
+	currentChunk := ""
+	currentCount := 0
+	currentByteLen := 0
+
+	for _, r := range normText {
+		charWeight := 1
+		switch {
+		case emojiRegex.MatchString(string(r)):
+			charWeight = 2
+		case cjkRegex.MatchString(string(r)):
+			charWeight = 2
+		}
+
+		// Check if adding this character would exceed the limit
+		if currentCount+charWeight > XMaxTweetLength-suffixLength {
+			// Save current chunk and start a new one
+			chunks = append(chunks, currentChunk)
+			currentChunk = string(r)
+			currentCount = charWeight
+			currentByteLen = len(string(r))
+		} else {
+			currentChunk += string(r)
+			currentCount += charWeight
+			currentByteLen += len(string(r))
+		}
+	}
+
+	// Add the last chunk if it's not empty
+	if currentChunk != "" {
+		chunks = append(chunks, currentChunk)
+	}
+
+	return chunks
 }

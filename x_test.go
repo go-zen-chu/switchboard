@@ -86,3 +86,79 @@ func TestTruncateTweet(t *testing.T) {
 		})
 	}
 }
+
+func TestSplitContentForTweets(t *testing.T) {
+	type args struct {
+		content      string
+		suffixLength int
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			name: "If content fits in one tweet, return single chunk",
+			args: args{
+				content:      "This is test text 1234567890-=~+*",
+				suffixLength: 34,
+			},
+			want: []string{"This is test text 1234567890-=~+*"},
+		},
+		{
+			name: "If content with CJK fits in one tweet, return single chunk",
+			args: args{
+				content:      "こんにちは 你好 안녕하세요😊💕🕖",
+				suffixLength: 34,
+			},
+			want: []string{"こんにちは 你好 안녕하세요😊💕🕖"},
+		},
+		{
+			name: "If ascii content exceeds limit, split into multiple chunks",
+			args: args{
+				content:      strings.Repeat("x", 300),
+				suffixLength: 34,
+			},
+			want: []string{
+				strings.Repeat("x", 206),
+				strings.Repeat("x", 94),
+			},
+		},
+		{
+			name: "If CJK content exceeds limit, split into multiple chunks",
+			args: args{
+				content:      strings.Repeat("あ", 150),
+				suffixLength: 34,
+			},
+			want: []string{
+				strings.Repeat("あ", 103),
+				strings.Repeat("あ", 47),
+			},
+		},
+		{
+			name: "If mixed content exceeds limit, split correctly",
+			args: args{
+				content:      strings.Repeat("x", 100) + strings.Repeat("あ", 80),
+				suffixLength: 34,
+			},
+			want: []string{
+				strings.Repeat("x", 100) + strings.Repeat("あ", 53),
+				strings.Repeat("あ", 27),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SplitContentForTweets(tt.args.content, tt.args.suffixLength)
+			if len(got) != len(tt.want) {
+				t.Errorf("SplitContentForTweets() returned %d chunks, want %d chunks", len(got), len(tt.want))
+				return
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("SplitContentForTweets() chunk[%d] = %v (len=%d), want %v (len=%d)", i, got[i], len(got[i]), tt.want[i], len(tt.want[i]))
+				}
+			}
+		})
+	}
+}

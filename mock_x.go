@@ -54,3 +54,18 @@ func (mr *MockXClientMockRecorder) Post(ctx, content any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Post", reflect.TypeOf((*MockXClient)(nil).Post), ctx, content)
 }
+
+// PostWithReply mocks base method.
+func (m *MockXClient) PostWithReply(ctx context.Context, content, inReplyToTweetID string) (*XPost, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostWithReply", ctx, content, inReplyToTweetID)
+	ret0, _ := ret[0].(*XPost)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PostWithReply indicates an expected call of PostWithReply.
+func (mr *MockXClientMockRecorder) PostWithReply(ctx, content, inReplyToTweetID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostWithReply", reflect.TypeOf((*MockXClient)(nil).PostWithReply), ctx, content, inReplyToTweetID)
+}
