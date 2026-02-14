@@ -117,16 +117,44 @@ func (s *Storer) trimHistoryIfNeeded() error {
 	}
 	
 	// Remove oldest posts until we're under the limit
-	// Posts are stored in chronological order (oldest first based on the sync workflow)
-	for currentSize > s.MaxHistorySizeBytes && len(s.SyncInfo.Posts) > 0 {
-		// Remove the oldest post (first element)
-		s.SyncInfo.Posts = s.SyncInfo.Posts[1:]
+	// Posts are stored in chronological order (oldest first, newest last)
+	// This is enforced by the sync workflow which appends new posts to the end
+	// We trim from the beginning to preserve the most recent posts
+	
+	// Binary search to find approximately how many posts to keep
+	// Start by trying to keep half, then adjust
+	low, high := 0, len(s.SyncInfo.Posts)
+	targetKeepCount := len(s.SyncInfo.Posts)
+	
+	for low <= high && len(s.SyncInfo.Posts) > 0 {
+		mid := (low + high) / 2
 		
-		// Recalculate size
-		currentSize, err = s.calculateSyncInfoSize()
+		// Temporarily trim to mid posts from the end
+		originalPosts := s.SyncInfo.Posts
+		s.SyncInfo.Posts = originalPosts[len(originalPosts)-mid:]
+		
+		size, err := s.calculateSyncInfoSize()
 		if err != nil {
-			return fmt.Errorf("recalculating sync info size: %w", err)
+			s.SyncInfo.Posts = originalPosts
+			return fmt.Errorf("calculating size during binary search: %w", err)
 		}
+		
+		if size <= s.MaxHistorySizeBytes {
+			// We can keep more posts
+			targetKeepCount = mid
+			low = mid + 1
+		} else {
+			// We need to keep fewer posts
+			high = mid - 1
+		}
+		
+		// Restore original for next iteration
+		s.SyncInfo.Posts = originalPosts
+	}
+	
+	// Apply the final trim if needed
+	if targetKeepCount < len(s.SyncInfo.Posts) {
+		s.SyncInfo.Posts = s.SyncInfo.Posts[len(s.SyncInfo.Posts)-targetKeepCount:]
 	}
 	
 	return nil

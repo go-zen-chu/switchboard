@@ -12,29 +12,52 @@ func TestStorer_TrimHistoryIfNeeded(t *testing.T) {
 		name                string
 		maxHistorySizeBytes int
 		numPosts            int
-		expectedPostsAfter  int
 		wantErr             bool
+		checkFunc           func(t *testing.T, stor *Storer, originalNumPosts int)
 	}{
 		{
 			name:                "no trimming when under limit",
 			maxHistorySizeBytes: 10 * 1024, // 10KB
 			numPosts:            5,
-			expectedPostsAfter:  5,
 			wantErr:             false,
+			checkFunc: func(t *testing.T, stor *Storer, originalNumPosts int) {
+				if len(stor.SyncInfo.Posts) != originalNumPosts {
+					t.Errorf("Expected no trimming, got %d posts (original: %d)", len(stor.SyncInfo.Posts), originalNumPosts)
+				}
+			},
 		},
 		{
 			name:                "trim when over limit",
 			maxHistorySizeBytes: 1024, // 1KB
 			numPosts:            100,
-			expectedPostsAfter:  0, // All posts should be trimmed as they exceed 1KB
 			wantErr:             false,
+			checkFunc: func(t *testing.T, stor *Storer, originalNumPosts int) {
+				if len(stor.SyncInfo.Posts) >= originalNumPosts {
+					t.Errorf("Expected posts to be trimmed, but got %d posts (original: %d)", len(stor.SyncInfo.Posts), originalNumPosts)
+				}
+				if len(stor.SyncInfo.Posts) == 0 {
+					t.Errorf("Expected some posts to remain after trimming, but got 0 posts")
+				}
+				// Verify we kept the most recent posts
+				if len(stor.SyncInfo.Posts) > 0 {
+					lastPost := stor.SyncInfo.Posts[len(stor.SyncInfo.Posts)-1]
+					expectedLastCid := fmt.Sprintf("test-cid-%d", originalNumPosts-1)
+					if lastPost.BlueskyCid != expectedLastCid {
+						t.Errorf("Expected to keep most recent post with CID %s, got %s", expectedLastCid, lastPost.BlueskyCid)
+					}
+				}
+			},
 		},
 		{
 			name:                "no trimming when unlimited (0)",
 			maxHistorySizeBytes: 0,
 			numPosts:            100,
-			expectedPostsAfter:  100,
 			wantErr:             false,
+			checkFunc: func(t *testing.T, stor *Storer, originalNumPosts int) {
+				if len(stor.SyncInfo.Posts) != originalNumPosts {
+					t.Errorf("Expected no trimming with unlimited size, got %d posts (original: %d)", len(stor.SyncInfo.Posts), originalNumPosts)
+				}
+			},
 		},
 	}
 
@@ -58,12 +81,8 @@ func TestStorer_TrimHistoryIfNeeded(t *testing.T) {
 				return
 			}
 
-			// For the trim case, just verify posts were removed
-			if tt.expectedPostsAfter == 0 && len(stor.SyncInfo.Posts) >= tt.numPosts {
-				t.Errorf("Expected posts to be trimmed, but got %d posts (original: %d)", len(stor.SyncInfo.Posts), tt.numPosts)
-			} else if tt.expectedPostsAfter > 0 && len(stor.SyncInfo.Posts) != tt.expectedPostsAfter {
-				t.Errorf("Expected %d posts after trimming, got %d", tt.expectedPostsAfter, len(stor.SyncInfo.Posts))
-			}
+			// Run custom checks
+			tt.checkFunc(t, stor, tt.numPosts)
 
 			// Verify size is under limit after trimming (if not unlimited)
 			if tt.maxHistorySizeBytes > 0 {
