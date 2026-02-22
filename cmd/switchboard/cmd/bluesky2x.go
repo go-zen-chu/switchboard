@@ -96,6 +96,15 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 	const linkToBlueskySuffixLength = 11 + switchboard.XShortenedLinkLength
 
 	for _, bpost := range newPosts {
+		// Check if this is a reply to own previously synced post
+		var inReplyToTweetID string
+		if bpost.Reply != nil {
+			if parentPostInfo, ok := pm[bpost.Reply.ParentCid]; ok && parentPostInfo.TweetID != "" {
+				inReplyToTweetID = parentPostInfo.TweetID
+				slog.Debug("Detected reply to own post", "cid", bpost.Cid, "parentCid", bpost.Reply.ParentCid, "inReplyToTweetID", inReplyToTweetID)
+			}
+		}
+
 		// Check content length to X tweet length limit
 		contentLength := switchboard.CountTweetCharacters(bpost.Content)
 
@@ -122,8 +131,12 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 				var xpost *switchboard.XPost
 				var err error
 				if i == 0 {
-					// First post
-					xpost, err = xcli.Post(ctx, cnt)
+					// First post: reply to own post if applicable, otherwise post normally
+					if inReplyToTweetID != "" {
+						xpost, err = xcli.PostWithReply(ctx, cnt, inReplyToTweetID)
+					} else {
+						xpost, err = xcli.Post(ctx, cnt)
+					}
 				} else {
 					// Reply to the first post
 					xpost, err = xcli.PostWithReply(ctx, cnt, firstPostID)
@@ -150,6 +163,11 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 						Content:              bpost.Content,
 						BlueskyPostCreatedAt: bpost.CreatedAt,
 					})
+					// Update pm so that subsequent posts in this run can find this as a parent
+					pm[bpost.Cid] = switchboard.PostInfo{
+						BlueskyCid: bpost.Cid,
+						TweetID:    xpost.ID,
+					}
 					if err := stor.StoreSyncInfo(); err != nil {
 						return fmt.Errorf("storing sync info: %w\n", err)
 					}
@@ -160,13 +178,18 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 			slog.Debug("Updated sync info")
 		} else {
 			// Content fits in a single tweet
-			bContent := bpost.Content
-			cnt := fmt.Sprintf("%s%s%s", bContent, linkToBlueskySuffixHeader, bpost.URL)
+			cnt := fmt.Sprintf("%s%s%s", bpost.Content, linkToBlueskySuffixHeader, bpost.URL)
 			if dryRun {
 				slog.Info("[DRY RUN] Don't send post to X", "content", cnt)
 				continue
 			}
-			xpost, err := xcli.Post(ctx, cnt)
+			var xpost *switchboard.XPost
+			var err error
+			if inReplyToTweetID != "" {
+				xpost, err = xcli.PostWithReply(ctx, cnt, inReplyToTweetID)
+			} else {
+				xpost, err = xcli.Post(ctx, cnt)
+			}
 			if err != nil {
 				var errXDup *switchboard.ErrXDuplicatePost
 				if errors.As(err, &errXDup) {
@@ -185,6 +208,11 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 				Content:              bpost.Content,
 				BlueskyPostCreatedAt: bpost.CreatedAt,
 			})
+			// Update pm so that subsequent posts in this run can find this as a parent
+			pm[bpost.Cid] = switchboard.PostInfo{
+				BlueskyCid: bpost.Cid,
+				TweetID:    xpost.ID,
+			}
 			if err := stor.StoreSyncInfo(); err != nil {
 				return fmt.Errorf("storing sync info: %w\n", err)
 			}

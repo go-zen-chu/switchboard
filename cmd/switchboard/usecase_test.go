@@ -229,6 +229,45 @@ func TestMain(t *testing.T) {
 			cleanup: cleanupOutputDir,
 		},
 		{
+			name: "If bluesky post is a reply to own post, sync to X as a reply",
+			args: []string{"switchboard", "bluesky2x"},
+			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient) {
+				parentCid := "test1test1test1test1test1test1test1test1test1test1test1test1"
+				mockBCli.EXPECT().GetMyLatestPostsCreatedAsc(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]switchboard.BlueskyPost{
+						{
+							Cid:       parentCid,
+							Content:   "test1",
+							CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+							URL:       "https://bsky.app/profile/did:plc:test1test1test1test1/post/test1test1",
+						},
+						{
+							Cid:       "test2test2test2test2test2test2test2test2test2test2test2test2",
+							Content:   "test2",
+							CreatedAt: time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC),
+							URL:       "https://bsky.app/profile/did:plc:test2test2test2test2/post/test2test2",
+							Reply: &switchboard.BlueskyReply{
+								RootCid:   parentCid,
+								ParentCid: parentCid,
+							},
+						},
+					}, nil)
+				gomock.InOrder(
+					mockXCli.EXPECT().Post(gomock.Any(), gomock.Regex("test1.*")).
+						Return(&switchboard.XPost{
+							ID: "1111111111111111111",
+						}, nil),
+					mockXCli.EXPECT().PostWithReply(gomock.Any(), gomock.Regex("test2.*"), "1111111111111111111").
+						Return(&switchboard.XPost{
+							ID: "2222222222222222222",
+						}, nil),
+				)
+			},
+			wantErr: false,
+			cleanup: cleanupOutputDir,
+		},
+		{
 			name:    "If bluesky2x --gen-workflow-file subcommand used, generate workflow files",
 			args:    []string{"switchboard", "bluesky2x", "--gen-workflow-file"},
 			wantErr: false,
