@@ -38,6 +38,7 @@ func (e *ErrXDuplicatePost) Error() string {
 type XClient interface {
 	Post(ctx context.Context, content string) (*XPost, error)
 	PostWithReply(ctx context.Context, content string, inReplyToTweetID string) (*XPost, error)
+	DeleteTweet(ctx context.Context, tweetID string) error
 }
 
 type xclient struct {
@@ -77,6 +78,14 @@ func (c *xclient) Post(ctx context.Context, content string) (*XPost, error) {
 
 func (c *xclient) PostWithReply(ctx context.Context, content string, inReplyToTweetID string) (*XPost, error) {
 	return c.post(ctx, content, inReplyToTweetID)
+}
+
+func (c *xclient) DeleteTweet(ctx context.Context, tweetID string) error {
+	_, err := managetweet.Delete(ctx, c.gotwiCli, &types.DeleteInput{ID: tweetID})
+	if err != nil {
+		return fmt.Errorf("managetweet delete tweet: %w", err)
+	}
+	return nil
 }
 
 func (c *xclient) post(ctx context.Context, content string, inReplyToTweetID string) (*XPost, error) {

@@ -69,3 +69,17 @@ func (mr *MockXClientMockRecorder) PostWithReply(ctx, content, inReplyToTweetID 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostWithReply", reflect.TypeOf((*MockXClient)(nil).PostWithReply), ctx, content, inReplyToTweetID)
 }
+
+// DeleteTweet mocks base method.
+func (m *MockXClient) DeleteTweet(ctx context.Context, tweetID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTweet", ctx, tweetID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteTweet indicates an expected call of DeleteTweet.
+func (mr *MockXClientMockRecorder) DeleteTweet(ctx, tweetID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTweet", reflect.TypeOf((*MockXClient)(nil).DeleteTweet), ctx, tweetID)
+}
