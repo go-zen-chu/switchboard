@@ -32,6 +32,9 @@ func NewBluesky2XCmd(req Bluesky2XCmdRequirements) *cobra.Command {
 	const defaultDryRun = false
 	var dryRun bool
 
+	const defaultMaxHistorySizeKB = 500
+	var maxHistorySizeKB int
+
 	// bluesky2xCmd represents the bluesky2x command
 	var bluesky2xCmd = &cobra.Command{
 		Use:   "bluesky2x",
@@ -47,7 +50,7 @@ func NewBluesky2XCmd(req Bluesky2XCmdRequirements) *cobra.Command {
 			ctx := req.Context()
 			bcli := req.BlueskyClient()
 			xcli := req.XClient()
-			if err := syncBlueskyLatestPosts2X(ctx, bcli, xcli, numSyncLatestPosts, dryRun); err != nil {
+			if err := syncBlueskyLatestPosts2X(ctx, bcli, xcli, numSyncLatestPosts, maxHistorySizeKB, dryRun); err != nil {
 				return fmt.Errorf("syncing bluesky latest posts to x: %w", err)
 			}
 			return nil
@@ -59,10 +62,11 @@ Make sure not to exceed the rate limit (Especially, if you are using Free plan).
 https://developer.x.com/en/docs/x-api/lists/list-tweets/introduction
 `)
 	bluesky2xCmd.Flags().BoolVar(&dryRun, "dry-run", defaultDryRun, "Dry run mode. Don't send posts to X and don't update sync info")
+	bluesky2xCmd.Flags().IntVar(&maxHistorySizeKB, "max-history-size", defaultMaxHistorySizeKB, "Maximum sync history size in KB (0 for unlimited)")
 	return bluesky2xCmd
 }
 
-func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClient, xcli switchboard.XClient, numSyncLatestPosts int, dryRun bool) error {
+func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClient, xcli switchboard.XClient, numSyncLatestPosts int, maxHistorySizeKB int, dryRun bool) error {
 	slog.Info("Start syncing latest posts from bluesky to X")
 	bposts, err := bcli.GetMyLatestPostsCreatedAsc(ctx, numSyncLatestPosts)
 	if err != nil {
@@ -70,7 +74,9 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 	}
 	slog.Debug("Got posts", "bluesky", bposts)
 
-	stor := switchboard.NewStorer()
+	// Convert KB to bytes
+	maxHistorySizeBytes := maxHistorySizeKB * 1024
+	stor := switchboard.NewStorerWithMaxSize(maxHistorySizeBytes)
 	syncInfo, err := stor.LoadSyncInfo()
 	if err != nil {
 		return fmt.Errorf("loading sync info: %w\n", err)
