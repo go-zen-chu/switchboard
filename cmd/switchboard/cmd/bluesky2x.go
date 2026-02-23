@@ -78,6 +78,8 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 
 	newPosts := make([]switchboard.BlueskyPost, 0, len(bposts))
 	pm := syncInfo.GetPostMap()
+	
+	// check if there is new bluesky posts that are not synced to X
 	for _, bpost := range bposts {
 		if _, ok := pm[bpost.Cid]; ok {
 			slog.Debug("Post already sent", "content", bpost.Content, "cid", bpost.Cid)
@@ -85,9 +87,8 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 		}
 		newPosts = append(newPosts, bpost)
 	}
-
 	if len(newPosts) == 0 {
-		slog.Info("No new posts. Finished.")
+		slog.Info("No new posts to be synced. Finish.")
 		return nil
 	}
 
