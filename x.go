@@ -121,6 +121,34 @@ func (c *xclient) post(ctx context.Context, content string, inReplyToTweetID str
 	return p, nil
 }
 
+func (c *xclient) Delete(ctx context.Context, tweetID string) error {
+	if tweetID == "" {
+		return fmt.Errorf("tweetID is empty")
+	}
+	di := &types.DeleteInput{
+		ID: tweetID,
+	}
+	_, err := managetweet.Delete(ctx, c.gotwiCli, di)
+	if err != nil {
+		ge, ok := err.(*gotwi.GotwiError)
+		if !ok {
+			return fmt.Errorf("managetweet delete tweet: %w", err)
+		}
+		if !ge.OnAPI {
+			return fmt.Errorf("managetweet delete tweet: %w", err)
+		}
+		slog.Warn("delete tweet",
+			"error title", ge.Title,
+			"error detail", ge.Detail,
+			"error type", ge.Type,
+			"error status", ge.Status,
+			"error status code", ge.StatusCode,
+		)
+		return fmt.Errorf("managetweet delete tweet: %w", err)
+	}
+	return nil
+}
+
 var (
 	urlRegex   = regexp.MustCompile(`https?://\S+`)
 	emojiRegex = regexp.MustCompile(`[\p{So}\p{Sk}][\p{Mn}\p{Me}\x{FE0F}\x{20E3}]?[\x{200D}\p{Zs}]?[\p{So}\p{Sk}]?`)

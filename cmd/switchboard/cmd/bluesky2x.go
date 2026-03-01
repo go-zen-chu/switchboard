@@ -76,6 +76,40 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 		return fmt.Errorf("loading sync info: %w\n", err)
 	}
 
+	// Check for deleted posts
+	bpostCidMap := make(map[string]bool)
+	for _, bpost := range bposts {
+		bpostCidMap[bpost.Cid] = true
+	}
+
+	// Detect and delete posts that were deleted in Bluesky
+	for i := range syncInfo.Posts {
+		post := &syncInfo.Posts[i]
+		// Skip if already marked as deleted
+		if post.Status == switchboard.PostStatusDeleted {
+			continue
+		}
+		// If post is not in current Bluesky posts and not yet deleted, delete it from X
+		if _, exists := bpostCidMap[post.BlueskyCid]; !exists {
+			if dryRun {
+				slog.Info("[DRY RUN] Would delete tweet", "cid", post.BlueskyCid, "tweet_id", post.TweetID, "content", post.Content)
+			} else {
+				slog.Info("Deleting tweet because Bluesky post was deleted", "cid", post.BlueskyCid, "tweet_id", post.TweetID)
+				if err := xcli.Delete(ctx, post.TweetID); err != nil {
+					slog.Warn("Failed to delete tweet", "tweet_id", post.TweetID, "error", err)
+					// Continue with other deletions even if one fails
+					continue
+				}
+				slog.Debug("Deleted tweet successfully", "tweet_id", post.TweetID)
+			}
+			// Update status to deleted
+			post.Status = switchboard.PostStatusDeleted
+			if err := stor.StoreSyncInfo(); err != nil {
+				return fmt.Errorf("storing sync info after deletion: %w\n", err)
+			}
+		}
+	}
+
 	newPosts := make([]switchboard.BlueskyPost, 0, len(bposts))
 	pm := syncInfo.GetPostMap()
 	
@@ -206,6 +240,7 @@ func syncLongPosts2X(
 			TweetID:              firstPostID,
 			Content:              bpost.Content,
 			BlueskyPostCreatedAt: bpost.CreatedAt,
+			Status:               switchboard.PostStatusSynced,
 		})
 		// Update pm so that subsequent posts in this run can find this as a parent
 		pm[bpost.Cid] = switchboard.PostInfo{

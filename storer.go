@@ -12,6 +12,11 @@ const (
 	syncInfoPath = "./output/sync_info.json"
 )
 
+const (
+	PostStatusSynced  = "synced"
+	PostStatusDeleted = "deleted"
+)
+
 type Storer struct {
 	SyncInfo *SyncInfo
 }
@@ -84,6 +89,7 @@ type PostInfo struct {
 	BlueskyPostCreatedAt time.Time `json:"bluesky_post_created_at"`
 	TweetID              string    `json:"tweet_id"`
 	Content              string    `json:"content"`
+	Status               string    `json:"status,omitempty"` // "synced" or "deleted"
 }
 
 func (s *SyncInfo) GetPostMap() map[string]PostInfo {
