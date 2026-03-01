@@ -16,9 +16,10 @@ import (
 )
 
 type switchboardRequirementsForTest struct {
-	ctx  context.Context
-	bcli switchboard.BlueskyClient
-	xcli switchboard.XClient
+	ctx    context.Context
+	bcli   switchboard.BlueskyClient
+	xcli   switchboard.XClient
+	gitter switchboard.Gitter
 }
 
 func (s *switchboardRequirementsForTest) Context() context.Context {
@@ -31,6 +32,10 @@ func (s *switchboardRequirementsForTest) BlueskyClient() switchboard.BlueskyClie
 
 func (s *switchboardRequirementsForTest) XClient() switchboard.XClient {
 	return s.xcli
+}
+
+func (s *switchboardRequirementsForTest) Gitter() switchboard.Gitter {
+	return s.gitter
 }
 
 func TestMain(t *testing.T) {
@@ -67,7 +72,7 @@ func TestMain(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          []string
-		customizeMock func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient)
+		customizeMock func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient, mockGitter *switchboard.MockGitter)
 		wantErr       bool
 		cleanup       func(t *testing.T)
 	}{
@@ -79,7 +84,7 @@ func TestMain(t *testing.T) {
 		{
 			name: "If bluesky2x subcommand used, sync bluesky post to x",
 			args: []string{"switchboard", "bluesky2x", "-v"},
-			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient) {
+			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient, mockGitter *switchboard.MockGitter) {
 				mockBCli.EXPECT().GetMyLatestPostsCreatedAsc(gomock.Any(), gomock.Any()).
 					Times(1).
 					Return([]switchboard.BlueskyPost{
@@ -109,9 +114,34 @@ func TestMain(t *testing.T) {
 			cleanup: cleanupOutputDir,
 		},
 		{
+			name: "If bluesky2x --update subcommand used, sync and commit/push",
+			args: []string{"switchboard", "bluesky2x", "--update"},
+			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient, mockGitter *switchboard.MockGitter) {
+				mockBCli.EXPECT().GetMyLatestPostsCreatedAsc(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]switchboard.BlueskyPost{
+						{
+							Cid:       "test1test1test1test1test1test1test1test1test1test1test1test1",
+							Content:   "test1",
+							CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+							URL:       "https://bsky.app/profile/did:plc:test1test1test1test1/post/test1test1",
+						},
+					}, nil)
+				mockXCli.EXPECT().Post(gomock.Any(), gomock.Regex("test1.*")).
+					Return(&switchboard.XPost{
+						ID: "1111111111111111111",
+					}, nil)
+				mockGitter.EXPECT().CommitAndPush(switchboard.DefaultGitCommitMessage).
+					Times(1).
+					Return(nil)
+			},
+			wantErr: false,
+			cleanup: cleanupOutputDir,
+		},
+		{
 			name: "If bluesky2x subcommand got forbidden error from X API, warn the error but continue",
 			args: []string{"switchboard", "bluesky2x"},
-			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient) {
+			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient, mockGitter *switchboard.MockGitter) {
 				mockBCli.EXPECT().GetMyLatestPostsCreatedAsc(gomock.Any(), gomock.Any()).
 					Times(1).
 					Return([]switchboard.BlueskyPost{
@@ -143,7 +173,7 @@ func TestMain(t *testing.T) {
 		{
 			name: "If bluesky2x subcommand got forbidden (duplicate post) error from X API, warn the error but continue",
 			args: []string{"switchboard", "bluesky2x"},
-			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient) {
+			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient, mockGitter *switchboard.MockGitter) {
 				mockBCli.EXPECT().GetMyLatestPostsCreatedAsc(gomock.Any(), gomock.Any()).
 					Times(1).
 					Return([]switchboard.BlueskyPost{
@@ -172,7 +202,7 @@ func TestMain(t *testing.T) {
 		{
 			name: "If bluesky2x subcommand got bluesky post longer than approx 280, divide post with reply",
 			args: []string{"switchboard", "bluesky2x"},
-			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient) {
+			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient, mockGitter *switchboard.MockGitter) {
 				test1URL := "https://bsky.app/profile/did:plc:test1test1test1test1/post/test1test1"
 				test2URL := "https://bsky.app/profile/did:plc:test2test2test2test2/post/test2test2"
 				mockBCli.EXPECT().GetMyLatestPostsCreatedAsc(gomock.Any(), gomock.Any()).
@@ -231,7 +261,7 @@ func TestMain(t *testing.T) {
 		{
 			name: "If bluesky post is a reply to own post, sync to X as a reply",
 			args: []string{"switchboard", "bluesky2x"},
-			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient) {
+			customizeMock: func(mockBCli *switchboard.MockBlueskyClient, mockXCli *switchboard.MockXClient, mockGitter *switchboard.MockGitter) {
 				parentCid := "test1test1test1test1test1test1test1test1test1test1test1test1"
 				mockBCli.EXPECT().GetMyLatestPostsCreatedAsc(gomock.Any(), gomock.Any()).
 					Times(1).
@@ -279,14 +309,16 @@ func TestMain(t *testing.T) {
 			c := gomock.NewController(t)
 			mockBCli := switchboard.NewMockBlueskyClient(c)
 			mockXCli := switchboard.NewMockXClient(c)
+			mockGitter := switchboard.NewMockGitter(c)
 			if tt.customizeMock != nil {
-				tt.customizeMock(mockBCli, mockXCli)
+				tt.customizeMock(mockBCli, mockXCli, mockGitter)
 			}
 
 			app, goterr := NewApp(&switchboardRequirementsForTest{
-				ctx:  context.Background(),
-				bcli: mockBCli,
-				xcli: mockXCli,
+				ctx:    context.Background(),
+				bcli:   mockBCli,
+				xcli:   mockXCli,
+				gitter: mockGitter,
 			})
 			if (goterr != nil) != tt.wantErr {
 				t.Errorf("NewApp error = %v, wantErr %v", goterr, tt.wantErr)
