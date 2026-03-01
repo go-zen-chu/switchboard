@@ -20,6 +20,7 @@ type Bluesky2XCmdRequirements interface {
 	Context() context.Context
 	BlueskyClient() switchboard.BlueskyClient
 	XClient() switchboard.XClient
+	Gitter() switchboard.Gitter
 }
 
 func NewBluesky2XCmd(req Bluesky2XCmdRequirements) *cobra.Command {
@@ -31,6 +32,9 @@ func NewBluesky2XCmd(req Bluesky2XCmdRequirements) *cobra.Command {
 
 	const defaultDryRun = false
 	var dryRun bool
+
+	const defaultUpdate = false
+	var update bool
 
 	// bluesky2xCmd represents the bluesky2x command
 	var bluesky2xCmd = &cobra.Command{
@@ -50,6 +54,11 @@ func NewBluesky2XCmd(req Bluesky2XCmdRequirements) *cobra.Command {
 			if err := syncBlueskyLatestPosts2X(ctx, bcli, xcli, numSyncLatestPosts, dryRun); err != nil {
 				return fmt.Errorf("syncing bluesky latest posts to x: %w", err)
 			}
+			if update {
+				if err := req.Gitter().CommitAndPush(switchboard.DefaultGitCommitMessage); err != nil {
+					return fmt.Errorf("git commit and push: %w", err)
+				}
+			}
 			return nil
 		},
 	}
@@ -59,6 +68,7 @@ Make sure not to exceed the rate limit (Especially, if you are using Free plan).
 https://developer.x.com/en/docs/x-api/lists/list-tweets/introduction
 `)
 	bluesky2xCmd.Flags().BoolVar(&dryRun, "dry-run", defaultDryRun, "Dry run mode. Don't send posts to X and don't update sync info")
+	bluesky2xCmd.Flags().BoolVar(&update, "update", defaultUpdate, "Commit and push sync info updates to the git repository after syncing")
 	return bluesky2xCmd
 }
 

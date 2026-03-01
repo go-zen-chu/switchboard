@@ -68,3 +68,12 @@ func (c *Container) XClient() switchboard.XClient {
 		return xcli, nil
 	})
 }
+
+func (c *Container) Gitter() switchboard.Gitter {
+	return initOnce(c, "Gitter", func() (switchboard.Gitter, error) {
+		return switchboard.NewGitter(
+			switchboard.DefaultGitUserEmail,
+			switchboard.DefaultGitUserName,
+		), nil
+	})
+}

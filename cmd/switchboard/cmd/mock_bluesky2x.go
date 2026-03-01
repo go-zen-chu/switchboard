@@ -69,6 +69,20 @@ func (mr *MockBluesky2XCmdRequirementsMockRecorder) Context() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBluesky2XCmdRequirements)(nil).Context))
 }
 
+// Gitter mocks base method.
+func (m *MockBluesky2XCmdRequirements) Gitter() switchboard.Gitter {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Gitter")
+	ret0, _ := ret[0].(switchboard.Gitter)
+	return ret0
+}
+
+// Gitter indicates an expected call of Gitter.
+func (mr *MockBluesky2XCmdRequirementsMockRecorder) Gitter() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Gitter", reflect.TypeOf((*MockBluesky2XCmdRequirements)(nil).Gitter))
+}
+
 // XClient mocks base method.
 func (m *MockBluesky2XCmdRequirements) XClient() switchboard.XClient {
 	m.ctrl.T.Helper()
