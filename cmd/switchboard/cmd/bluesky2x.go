@@ -112,6 +112,8 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 
 	newPosts := make([]switchboard.BlueskyPost, 0, len(bposts))
 	pm := syncInfo.GetPostMap()
+	
+	// check if there is new bluesky posts that are not synced to X
 	for _, bpost := range bposts {
 		if _, ok := pm[bpost.Cid]; ok {
 			slog.Debug("Post already sent", "content", bpost.Content, "cid", bpost.Cid)
@@ -119,9 +121,8 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 		}
 		newPosts = append(newPosts, bpost)
 	}
-
 	if len(newPosts) == 0 {
-		slog.Info("No new posts. Finished.")
+		slog.Info("No new posts to be synced. Finish.")
 		return nil
 	}
 
@@ -130,45 +131,181 @@ func syncBlueskyLatestPosts2X(ctx context.Context, bcli switchboard.BlueskyClien
 	const linkToBlueskySuffixLength = 11 + switchboard.XShortenedLinkLength
 
 	for _, bpost := range newPosts {
-		bContent := bpost.Content
-		// Truncate content to X tweet length limit
+		// Check if this is a reply to own previously synced post
+		var inReplyToTweetID string
+		if bpost.Reply != nil {
+			if parentPostInfo, ok := pm[bpost.Reply.ParentCid]; ok && parentPostInfo.TweetID != "" {
+				inReplyToTweetID = parentPostInfo.TweetID
+				slog.Debug("Detected reply to own post", "cid", bpost.Cid, "parentCid", bpost.Reply.ParentCid, "inReplyToTweetID", inReplyToTweetID)
+			}
+		}
+
+		// Check content length to X tweet length limit
 		contentLength := switchboard.CountTweetCharacters(bpost.Content)
 
 		if contentLength > switchboard.XMaxTweetLength-linkToBlueskySuffixLength {
-			bContent = switchboard.TruncateTweet(bpost.Content, linkToBlueskySuffixLength)
-		}
-		cnt := fmt.Sprintf("%s%s%s", bContent, linkToBlueskySuffixHeader, bpost.URL)
-		if dryRun {
-			slog.Info("[DRY RUN] Don't send post to X", "content", cnt)
+			if err := syncLongPosts2X(ctx, xcli, stor, pm, bpost, inReplyToTweetID, linkToBlueskySuffixHeader, linkToBlueskySuffixLength, dryRun); err != nil {
+				return fmt.Errorf("syncing long post to X (cid: %s): %w", bpost.Cid, err)
+			}
 			continue
 		}
-		xpost, err := xcli.Post(ctx, cnt)
+
+		if err := syncSimplePost2X(ctx, xcli, stor, pm, bpost, inReplyToTweetID, linkToBlueskySuffixHeader, dryRun); err != nil {
+			return fmt.Errorf("syncing simple post to X (cid: %s): %w", bpost.Cid, err)
+		}
+	}
+
+	slog.Info("Finished syncing from bluesky to X")
+	return nil
+}
+
+func syncLongPosts2X(
+	ctx context.Context,
+	xcli switchboard.XClient,
+	stor *switchboard.Storer,
+	pm map[string]switchboard.PostInfo,
+	bpost switchboard.BlueskyPost,
+	inReplyToTweetID string,
+	linkToBlueskySuffixHeader string,
+	linkToBlueskySuffixLength int,
+	dryRun bool,
+) error {
+	// Split content into multiple tweets with replies
+	chunks := switchboard.SplitContentForTweets(bpost.Content, linkToBlueskySuffixLength)
+
+	var firstPostID string
+	postedIDs := make([]string, 0, len(chunks))
+	for i, chunk := range chunks {
+		var cnt string
+		if i == 0 {
+			// First post includes the bluesky link
+			cnt = fmt.Sprintf("%s%s%s", chunk, linkToBlueskySuffixHeader, bpost.URL)
+		} else {
+			// Continuation tweets just have the content
+			cnt = chunk
+		}
+
+		if dryRun {
+			slog.Info("[DRY RUN] Don't send post to X", "content", cnt, "part", i+1, "of", len(chunks))
+			continue
+		}
+
+		var xpost *switchboard.XPost
+		var err error
+		if i == 0 {
+			// First post: reply to own post if applicable, otherwise post normally
+			if inReplyToTweetID != "" {
+				xpost, err = xcli.PostWithReply(ctx, cnt, inReplyToTweetID)
+			} else {
+				xpost, err = xcli.Post(ctx, cnt)
+			}
+		} else {
+			// Reply to the first post
+			xpost, err = xcli.PostWithReply(ctx, cnt, firstPostID)
+		}
+
 		if err != nil {
 			var errXDup *switchboard.ErrXDuplicatePost
 			if errors.As(err, &errXDup) {
 				slog.Warn("Found duplicate tweet in X", "content", cnt)
-				continue
+			} else {
+				slog.Warn("Get error while posting tweet", "content", cnt, "error", err)
 			}
-			slog.Warn("Get error while posting tweet", "content", cnt, "error", err)
-			continue
+			// Delete already posted chunks so next run can retry from the beginning
+			for _, id := range postedIDs {
+				if delErr := xcli.DeleteTweet(ctx, id); delErr != nil {
+					slog.Warn("Failed to delete tweet for rollback", "tweet id", id, "error", delErr)
+				} else {
+					slog.Info("Deleted tweet for rollback", "tweet id", id)
+				}
+			}
+			break
 		}
-		slog.Debug("Posted tweet", "cid", bpost.Cid, "tweet id", xpost.ID, "content", cnt)
 
-		// Store sync info for when got an error while processing (& retry)
+		postedIDs = append(postedIDs, xpost.ID)
+		if i == 0 {
+			firstPostID = xpost.ID
+			slog.Debug("Posted first tweet", "cid", bpost.Cid, "tweet id", xpost.ID, "content", cnt)
+		} else {
+			slog.Debug("Posted reply tweet", "cid", bpost.Cid, "tweet id", xpost.ID, "content", cnt, "part", i+1, "of", len(chunks))
+		}
+	}
+
+	// Store sync info only after all chunks are posted successfully.
+	// If any chunk failed, already posted tweets are deleted above so next run retries cleanly.
+	allChunksPosted := !dryRun && len(postedIDs) == len(chunks)
+	if allChunksPosted {
 		stor.SyncInfo.Posts = append(stor.SyncInfo.Posts, switchboard.PostInfo{
 			BlueskyCid:           bpost.Cid,
-			TweetID:              xpost.ID,
+			TweetID:              firstPostID,
 			Content:              bpost.Content,
 			BlueskyPostCreatedAt: bpost.CreatedAt,
 			Status:               switchboard.PostStatusSynced,
 		})
+		// Update pm so that subsequent posts in this run can find this as a parent
+		pm[bpost.Cid] = switchboard.PostInfo{
+			BlueskyCid: bpost.Cid,
+			TweetID:    firstPostID,
+		}
 		if err := stor.StoreSyncInfo(); err != nil {
 			return fmt.Errorf("storing sync info: %w\n", err)
 		}
 		slog.Debug("Updated sync info")
 	}
+	return nil
+}
 
-	slog.Info("Finished syncing from bluesky to X")
+func syncSimplePost2X(
+	ctx context.Context,
+	xcli switchboard.XClient,
+	stor *switchboard.Storer,
+	pm map[string]switchboard.PostInfo,
+	bpost switchboard.BlueskyPost,
+	inReplyToTweetID string,
+	linkToBlueskySuffixHeader string,
+	dryRun bool,
+) error {
+	// Content fits in a single tweet
+	cnt := fmt.Sprintf("%s%s%s", bpost.Content, linkToBlueskySuffixHeader, bpost.URL)
+	if dryRun {
+		slog.Info("[DRY RUN] Don't send post to X", "content", cnt)
+		return nil
+	}
+
+	var xpost *switchboard.XPost
+	var err error
+	if inReplyToTweetID != "" {
+		xpost, err = xcli.PostWithReply(ctx, cnt, inReplyToTweetID)
+	} else {
+		xpost, err = xcli.Post(ctx, cnt)
+	}
+	if err != nil {
+		var errXDup *switchboard.ErrXDuplicatePost
+		if errors.As(err, &errXDup) {
+			slog.Warn("Found duplicate tweet in X", "content", cnt)
+			return nil
+		}
+		slog.Warn("Get error while posting tweet", "content", cnt, "error", err)
+		return nil
+	}
+	slog.Debug("Posted tweet", "cid", bpost.Cid, "tweet id", xpost.ID, "content", cnt)
+
+	// Store sync info for when got an error while processing (& retry)
+	stor.SyncInfo.Posts = append(stor.SyncInfo.Posts, switchboard.PostInfo{
+		BlueskyCid:           bpost.Cid,
+		TweetID:              xpost.ID,
+		Content:              bpost.Content,
+		BlueskyPostCreatedAt: bpost.CreatedAt,
+	})
+	// Update pm so that subsequent posts in this run can find this as a parent
+	pm[bpost.Cid] = switchboard.PostInfo{
+		BlueskyCid: bpost.Cid,
+		TweetID:    xpost.ID,
+	}
+	if err := stor.StoreSyncInfo(); err != nil {
+		return fmt.Errorf("storing sync info: %w\n", err)
+	}
+	slog.Debug("Updated sync info")
 	return nil
 }
 
